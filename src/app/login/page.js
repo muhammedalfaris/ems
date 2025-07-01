@@ -78,7 +78,6 @@ export default function LoginPage() {
             <path d="M35 20 C26 20, 20 26, 20 35 C20 44, 26 50, 35 50 C44 50, 50 44, 50 35 C50 26, 44 20, 35 20" fill="none" stroke="currentColor" strokeWidth="0.6"/>
             <path d="M35 25 C29 25, 25 29, 25 35 C25 41, 29 45, 35 45 C41 45, 45 41, 45 35 C45 29, 41 25, 35 25" fill="none" stroke="currentColor" strokeWidth="0.5"/>
             <path d="M35 30 C32 30, 30 32, 30 35 C30 38, 32 40, 35 40 C38 40, 40 38, 40 35 C40 32, 38 30, 35 30" fill="none" stroke="currentColor" strokeWidth="0.4"/>
-            {/* Ridge breaks for realism */}
             <path d="M15 25 C25 23, 35 25, 45 23" fill="none" stroke="currentColor" strokeWidth="0.6"/>
             <path d="M20 40 C30 38, 40 42, 50 40" fill="none" stroke="currentColor" strokeWidth="0.5"/>
           </svg>
@@ -90,7 +89,6 @@ export default function LoginPage() {
             <path d="M30 5 C40 5, 50 15, 50 25 C50 35, 40 45, 30 45 C35 40, 40 35, 40 25 C40 20, 35 15, 30 15 C25 15, 20 20, 20 25 C20 35, 25 40, 30 45 C20 45, 10 35, 10 25 C10 15, 20 5, 30 5" fill="none" stroke="currentColor" strokeWidth="0.7"/>
             <path d="M30 10 C35 10, 40 15, 40 20 C40 25, 35 30, 30 30 C32 28, 35 25, 35 20 C35 18, 32 15, 30 15 C28 15, 25 18, 25 20 C25 25, 28 28, 30 30 C25 30, 20 25, 20 20 C20 15, 25 10, 30 10" fill="none" stroke="currentColor" strokeWidth="0.6"/>
             <path d="M30 20 C32 20, 35 22, 35 25 C35 28, 32 30, 30 30 C28 30, 25 28, 25 25 C25 22, 28 20, 30 20" fill="none" stroke="currentColor" strokeWidth="0.5"/>
-            {/* Spiral center */}
             <circle cx="30" cy="25" r="2" fill="none" stroke="currentColor" strokeWidth="0.4"/>
           </svg>
         </div>
@@ -103,7 +101,6 @@ export default function LoginPage() {
             <path d="M14 40 C24 30, 34 25, 40 25 C46 25, 56 30, 66 40" fill="none" stroke="currentColor" strokeWidth="0.6"/>
             <path d="M16 35 C26 25, 36 20, 40 20 C44 20, 54 25, 64 35" fill="none" stroke="currentColor" strokeWidth="0.5"/>
             <path d="M18 30 C28 22, 38 18, 40 18 C42 18, 52 22, 62 30" fill="none" stroke="currentColor" strokeWidth="0.4"/>
-            {/* Ridge interruptions */}
             <path d="M25 38 C30 36, 35 38, 40 36 C45 38, 50 36, 55 38" fill="none" stroke="currentColor" strokeWidth="0.5"/>
             <path d="M20 32 C25 30, 30 32, 35 30" fill="none" stroke="currentColor" strokeWidth="0.4"/>
           </svg>
@@ -123,7 +120,6 @@ export default function LoginPage() {
             <path d="M22.5 5 C30 5, 35 12, 35 20 C35 35, 25 45, 22.5 45 C20 45, 10 35, 10 20 C10 12, 15 5, 22.5 5" fill="none" stroke="currentColor" strokeWidth="0.7"/>
             <path d="M22.5 10 C27 10, 30 15, 30 20 C30 30, 25 35, 22.5 35 C20 35, 15 30, 15 20 C15 15, 18 10, 22.5 10" fill="none" stroke="currentColor" strokeWidth="0.6"/>
             <path d="M22.5 15 C25 15, 27 17, 27 20 C27 25, 25 28, 22.5 28 C20 28, 18 25, 18 20 C18 17, 20 15, 22.5 15" fill="none" stroke="currentColor" strokeWidth="0.5"/>
-            {/* Ridge details */}
             <path d="M18 25 C20 23, 25 25, 27 23" fill="none" stroke="currentColor" strokeWidth="0.4"/>
           </svg>
         </div>
@@ -142,7 +138,6 @@ export default function LoginPage() {
                   <path d="M32 16 C40 16, 46 22, 46 30 C46 38, 40 44, 32 44 C24 44, 18 38, 18 30 C18 22, 24 16, 32 16" fill="none" stroke="currentColor" strokeWidth="0.6"/>
                   <path d="M32 20 C37 20, 42 25, 42 30 C42 35, 37 40, 32 40 C27 40, 22 35, 22 30 C22 25, 27 20, 32 20" fill="none" stroke="currentColor" strokeWidth="0.5"/>
                   <path d="M32 24 C35 24, 38 27, 38 30 C38 33, 35 36, 32 36 C29 36, 26 33, 26 30 C26 27, 29 24, 32 24" fill="none" stroke="currentColor" strokeWidth="0.4"/>
-                  {/* Ridge break for realism */}
                   <path d="M22 25 C27 23, 32 25, 37 23" fill="none" stroke="currentColor" strokeWidth="0.4"/>
                 </svg>
               </div>

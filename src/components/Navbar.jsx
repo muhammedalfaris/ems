@@ -9,14 +9,23 @@ export default function Navbar({ activeTab = 'users' }) {
   const navItems = [
     { id: 'users', label: 'Users', icon: Users },
     { id: 'manage', label: 'Manage Users', icon: UserCog },
-    { id: 'logs', label: 'User Log', icon: FileText },
+    { id: 'userlog', label: 'User Log', icon: FileText },
     { id: 'devices', label: 'Devices', icon: Smartphone },
     { id: 'profile', label: 'Profile', icon: User }
   ];
 
   const handleNavClick = (tabId) => {
-    console.log(`Navigating to: ${tabId}`);
-    setIsMobileMenuOpen(false);
+    const routes = {
+    users: '/users',
+    manage: '/manage',
+    userlog: '/userlog',
+    devices: '/devices',
+    profile: '/profile',
+  };
+  if (routes[tabId]) {
+    router.push(routes[tabId]);
+  }
+  setIsMobileMenuOpen(false);
   };
 
   const handleLogout = () => {
