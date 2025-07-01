@@ -2,8 +2,10 @@
 
 import { useState } from 'react';
 import { Eye, EyeOff, Mail, Lock, Users, Shield, ArrowRight } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -41,15 +43,16 @@ export default function LoginPage() {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validateForm()) return;
+    // e.preventDefault();
+    // if (!validateForm()) return;
     
-    setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-      console.log('Login attempt:', formData);
-    }, 2000);
+    // setIsLoading(true);
+    // // Simulate API call
+    // setTimeout(() => {
+    //   setIsLoading(false);
+    //   console.log('Login attempt:', formData);
+    // }, 2000);
+    router.push('/users'); 
   };
 
   const handleForgotPassword = () => {
