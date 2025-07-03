@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Eye, EyeOff, Mail, Lock, Users, Shield, ArrowRight } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, Users, Shield, ArrowRight, Crown } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
@@ -9,7 +9,7 @@ export default function LoginPage() {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-    role: 'employee'
+    role: 'branch-admin'
   });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -43,15 +43,6 @@ export default function LoginPage() {
   };
 
   const handleSubmit = async (e) => {
-    // e.preventDefault();
-    // if (!validateForm()) return;
-    
-    // setIsLoading(true);
-    // // Simulate API call
-    // setTimeout(() => {
-    //   setIsLoading(false);
-    //   console.log('Login attempt:', formData);
-    // }, 2000);
     router.push('/users'); 
   };
 
@@ -142,83 +133,95 @@ export default function LoginPage() {
                 </svg>
               </div>
             </div>
-            <h1 className="text-3xl font-bold text-white mb-2">EMS Portal</h1>
-            <p className="text-gray-300">Employee Management System</p>
+            <h1 className="text-3xl sm:text-2xl font-bold text-white mb-2">EMS Portal</h1>
+            <p className="text-gray-300 sm:text-sm">Employee Management System</p>
           </div>
 
           {/* Login Form */}
-          <div className="backdrop-blur-lg bg-white/10 rounded-3xl p-8 shadow-2xl border border-white/20">
-            <div className="space-y-6">
+          <div className="backdrop-blur-lg bg-white/10 rounded-3xl p-8 sm:p-6 shadow-2xl border border-white/20">
+            <div className="space-y-6 sm:space-y-5">
               {/* Role Selector */}
-              <div className="flex bg-white/5 rounded-2xl p-1 backdrop-blur-sm">
+              <div className="grid grid-cols-3 bg-white/5 rounded-2xl p-1 backdrop-blur-sm gap-1">
                 <button
                   type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, role: 'employee' }))}
-                  className={`flex-1 flex items-center justify-center py-3 px-4 rounded-xl transition-all duration-300 ${
-                    formData.role === 'employee'
+                  onClick={() => setFormData(prev => ({ ...prev, role: 'super-admin' }))}
+                  className={`flex flex-col items-center justify-center py-3 px-2 rounded-xl transition-all duration-300 ${
+                    formData.role === 'super-admin'
                       ? 'bg-gradient-to-r from-purple-500 to-cyan-500 text-white shadow-lg'
                       : 'text-gray-300 hover:text-white'
                   }`}
                 >
-                  <Users className="w-4 h-4 mr-2" />
-                  Employee
+                  <Crown className="w-4 h-4 mb-1" />
+                  <span className="text-xs sm:text-[10px] font-medium leading-tight">Super Admin</span>
                 </button>
                 <button
                   type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, role: 'admin' }))}
-                  className={`flex-1 flex items-center justify-center py-3 px-4 rounded-xl transition-all duration-300 ${
-                    formData.role === 'admin'
+                  onClick={() => setFormData(prev => ({ ...prev, role: 'company-admin' }))}
+                  className={`flex flex-col items-center justify-center py-3 px-2 rounded-xl transition-all duration-300 ${
+                    formData.role === 'company-admin'
                       ? 'bg-gradient-to-r from-purple-500 to-cyan-500 text-white shadow-lg'
                       : 'text-gray-300 hover:text-white'
                   }`}
                 >
-                  <Shield className="w-4 h-4 mr-2" />
-                  Admin
+                  <Shield className="w-4 h-4 mb-1" />
+                  <span className="text-xs sm:text-[10px] font-medium leading-tight">Company Admin</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, role: 'branch-admin' }))}
+                  className={`flex flex-col items-center justify-center py-3 px-2 rounded-xl transition-all duration-300 ${
+                    formData.role === 'branch-admin'
+                      ? 'bg-gradient-to-r from-purple-500 to-cyan-500 text-white shadow-lg'
+                      : 'text-gray-300 hover:text-white'
+                  }`}
+                >
+                  <Users className="w-4 h-4 mb-1" />
+                  <span className="text-xs sm:text-[10px] font-medium leading-tight">Branch Admin</span>
                 </button>
               </div>
 
               {/* Email Field */}
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-200 block">
+                <label className="text-sm sm:text-xs font-medium text-gray-200 block">
                   Email Address
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <Mail className="h-5 w-5 text-gray-400" />
+                    <Mail className="h-5 w-5 sm:h-4 sm:w-4 text-gray-400" />
                   </div>
                   <input
                     type="email"
                     name="email"
                     value={formData.email}
                     onChange={handleInputChange}
-                    className={`w-full pl-12 pr-4 py-4 bg-white/5 border ${
+                    className={`w-full pl-12 sm:pl-10 pr-4 py-4 sm:py-3 bg-white/5 border ${
                       errors.email ? 'border-red-400' : 'border-white/20'
-                    } rounded-2xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent backdrop-blur-sm transition-all duration-300`}
+                    } rounded-2xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent backdrop-blur-sm transition-all duration-300 text-base sm:text-sm`}
                     placeholder="Enter your email"
                   />
                 </div>
                 {errors.email && (
-                  <p className="text-red-400 text-sm mt-1">{errors.email}</p>
+                  <p className="text-red-400 text-sm sm:text-xs mt-1">{errors.email}</p>
                 )}
               </div>
 
               {/* Password Field */}
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-200 block">
+                <label className="text-sm sm:text-xs font-medium text-gray-200 block">
                   Password
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-gray-400" />
+                    <Lock className="h-5 w-5 sm:h-4 sm:w-4 text-gray-400" />
                   </div>
                   <input
                     type={showPassword ? 'text' : 'password'}
                     name="password"
                     value={formData.password}
                     onChange={handleInputChange}
-                    className={`w-full pl-12 pr-12 py-4 bg-white/5 border ${
+                    className={`w-full pl-12 sm:pl-10 pr-12 py-4 sm:py-3 bg-white/5 border ${
                       errors.password ? 'border-red-400' : 'border-white/20'
-                    } rounded-2xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent backdrop-blur-sm transition-all duration-300`}
+                    } rounded-2xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent backdrop-blur-sm transition-all duration-300 text-base sm:text-sm`}
                     placeholder="Enter your password"
                   />
                   <button
@@ -226,11 +229,11 @@ export default function LoginPage() {
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-white transition-colors duration-200"
                   >
-                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    {showPassword ? <EyeOff className="h-5 w-5 sm:h-4 sm:w-4" /> : <Eye className="h-5 w-5 sm:h-4 sm:w-4" />}
                   </button>
                 </div>
                 {errors.password && (
-                  <p className="text-red-400 text-sm mt-1">{errors.password}</p>
+                  <p className="text-red-400 text-sm sm:text-xs mt-1">{errors.password}</p>
                 )}
               </div>
 
@@ -239,7 +242,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={handleForgotPassword}
-                  className="text-sm text-purple-300 hover:text-purple-200 transition-colors duration-200"
+                  className="text-sm sm:text-xs text-purple-300 hover:text-purple-200 transition-colors duration-200"
                 >
                   Forgot your password?
                 </button>
@@ -250,25 +253,25 @@ export default function LoginPage() {
                 type="submit"
                 disabled={isLoading}
                 onClick={handleSubmit}
-                className="w-full bg-gradient-to-r from-purple-500 to-cyan-500 text-white py-4 px-6 rounded-2xl font-semibold shadow-2xl hover:shadow-purple-500/25 transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center"
+                className="w-full bg-gradient-to-r from-purple-500 to-cyan-500 text-white py-4 sm:py-3 px-6 rounded-2xl font-semibold shadow-2xl hover:shadow-purple-500/25 transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center text-base sm:text-sm"
               >
                 {isLoading ? (
                   <div className="flex items-center">
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                    <div className="animate-spin rounded-full h-5 w-5 sm:h-4 sm:w-4 border-b-2 border-white mr-2"></div>
                     Signing In...
                   </div>
                 ) : (
                   <div className="flex items-center">
                     Sign In
-                    <ArrowRight className="w-5 h-5 ml-2" />
+                    <ArrowRight className="w-5 h-5 sm:w-4 sm:h-4 ml-2" />
                   </div>
                 )}
               </button>
             </div>
 
             {/* Footer */}
-            <div className="mt-8 text-center">
-              <p className="text-gray-400 text-sm">
+            <div className="mt-8 sm:mt-6 text-center">
+              <p className="text-gray-400 text-sm sm:text-xs">
                 Secure access to your employee portal
               </p>
             </div>
@@ -276,7 +279,7 @@ export default function LoginPage() {
 
           {/* Additional Info */}
           <div className="mt-6 text-center">
-            <p className="text-gray-400 text-xs">
+            <p className="text-gray-400 text-xs sm:text-[10px]">
               © 2025 Employee Management System. All rights reserved.
             </p>
           </div>
