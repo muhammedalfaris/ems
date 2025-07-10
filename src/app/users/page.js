@@ -1,73 +1,53 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Users, Smartphone, User, Plus, Edit, Trash2} from 'lucide-react';
 import Navbar from '@/components/Navbar';
 
 export default function HomePage() {
-  // Sample employee data
-  const [employees] = useState([
-    {
-      id: 1,
-      name: 'John Doe',
-      employeeId: 'EMP001',
-      gender: 'Male',
-      hourlyPay: '₹25.00',
-      fingerId: 'FID001',
-      date: '2024-01-15',
-      device: 'Device-01'
-    },
-    {
-      id: 2,
-      name: 'Sarah Johnson',
-      employeeId: 'EMP002',
-      gender: 'Female',
-      hourlyPay: '₹28.50',
-      fingerId: 'FID002',
-      date: '2024-01-20',
-      device: 'Device-02'
-    },
-    {
-      id: 3,
-      name: 'Michael Chen',
-      employeeId: 'EMP003',
-      gender: 'Male',
-      hourlyPay: '₹30.00',
-      fingerId: 'FID003',
-      date: '2024-02-01',
-      device: 'Device-01'
-    },
-    {
-      id: 4,
-      name: 'Emily Davis',
-      employeeId: 'EMP004',
-      gender: 'Female',
-      hourlyPay: '₹27.00',
-      fingerId: 'FID004',
-      date: '2024-02-10',
-      device: 'Device-03'
-    },
-    {
-      id: 5,
-      name: 'David Wilson',
-      employeeId: 'EMP005',
-      gender: 'Male',
-      hourlyPay: '₹32.00',
-      fingerId: 'FID005',
-      date: '2024-02-15',
-      device: 'Device-02'
-    },
-    {
-      id: 6,
-      name: 'Lisa Anderson',
-      employeeId: 'EMP006',
-      gender: 'Female',
-      hourlyPay: '₹29.50',
-      fingerId: 'FID006',
-      date: '2024-02-20',
-      device: 'Device-01'
-    }
-  ]);
+  const [employees, setEmployees] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+  const activeToday = employees.filter(emp => emp.date === todayStr).length;
+
+  // Fetch employees from API
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('https://emsapi.disagglobal.com/api/users');
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        // Transform API data to match the expected format
+        const transformedEmployees = result.data.map(employee => ({
+          id: employee.id,
+          name: employee.name,
+          employeeId: `EMP${employee.serialnumber.toString().padStart(3, '0')}`,
+          gender: employee.gender,
+          hourlyPay: '₹25.00', // Default value since not provided in API
+          fingerId: `FID${employee.fingerprint_id.toString().padStart(3, '0')}`,
+          date: employee.date,
+          device: employee.device
+        }));
+        
+        setEmployees(transformedEmployees);
+      } catch (err) {
+        setError(err.message);
+        console.error('Error fetching employees:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEmployees();
+  }, []);
 
   const handleAddEmployee = () => {
     console.log('Add new employee');
@@ -84,6 +64,39 @@ export default function HomePage() {
   const handleDeleteEmployee = (employee) => {
     console.log('Delete employee:', employee);
   };
+
+  // Calculate unique devices count
+  const uniqueDevices = [...new Set(employees.map(emp => emp.device))].length;
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-white mb-4"></div>
+          <p className="text-white text-lg">Loading employees...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-400 text-xl mb-4">Error loading employees</div>
+          <p className="text-white">{error}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="mt-4 bg-gradient-to-r from-purple-500 to-cyan-500 text-white px-6 py-3 rounded-xl font-semibold"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -154,7 +167,7 @@ export default function HomePage() {
                 </div>
                 <div className="ml-4">
                   <p className="text-gray-300 text-sm">Active Today</p>
-                  <p className="text-2xl font-bold text-white">{Math.floor(employees.length * 0.8)}</p>
+                 <p className="text-2xl font-bold text-white">{activeToday}</p>
                 </div>
               </div>
             </div>
@@ -166,7 +179,7 @@ export default function HomePage() {
                 </div>
                 <div className="ml-4">
                   <p className="text-gray-300 text-sm">Devices</p>
-                  <p className="text-2xl font-bold text-white">3</p>
+                  <p className="text-2xl font-bold text-white">{uniqueDevices}</p>
                 </div>
               </div>
             </div>
