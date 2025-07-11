@@ -17,7 +17,14 @@ export default function HomePage() {
     const fetchEmployees = async () => {
       try {
         setLoading(true);
-        const response = await fetch('https://emsapi.disagglobal.com/api/users');
+        const token = sessionStorage.getItem('access_token');
+        const response = await fetch('https://emsapi.disagglobal.com/api/users', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+        });
         
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);

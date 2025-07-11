@@ -9,7 +9,7 @@ export default function LoginPage() {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-    role: 'branch-admin'
+    role: 'super-admin'
   });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -34,8 +34,8 @@ export default function LoginPage() {
     
     if (!formData.password) {
       newErrors.password = 'Password is required';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
+    } else if (formData.password.length < 3) {
+      newErrors.password = 'Password must be at least 3 characters';
     }
     
     setErrors(newErrors);
@@ -43,11 +43,59 @@ export default function LoginPage() {
   };
 
   const handleSubmit = async (e) => {
-    router.push('/users'); 
+    e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsLoading(true);
+    setErrors({});
+
+    try {
+      const response = await fetch('https://emsapi.disagglobal.com/api/adminlogin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          admin_email: formData.email,
+          admin_pwd: formData.password
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Store access token in sessionStorage
+        sessionStorage.setItem('access_token', data.access_token);
+        sessionStorage.setItem('token_type', data.token_type);
+        sessionStorage.setItem('admin_info', JSON.stringify(data.admin));
+        
+        // Optional: Store selected role for UI purposes
+        sessionStorage.setItem('selected_role', formData.role);
+        
+        // Redirect to users page
+        router.push('/users');
+      } else {
+        // Handle API errors
+        setErrors({
+          api: data.message || 'Login failed. Please check your credentials.'
+        });
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      setErrors({
+        api: 'Network error. Please check your connection and try again.'
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleForgotPassword = () => {
     console.log('Forgot password clicked');
+    // You can implement forgot password functionality here
   };
 
   return (
@@ -139,8 +187,8 @@ export default function LoginPage() {
 
           {/* Login Form */}
           <div className="backdrop-blur-lg bg-white/10 rounded-3xl p-8 sm:p-6 shadow-2xl border border-white/20">
-            <div className="space-y-6 sm:space-y-5">
-              {/* Role Selector */}
+            <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-5">
+              {/* Role Selector - UI Only */}
               <div className="grid grid-cols-3 bg-white/5 rounded-2xl p-1 backdrop-blur-sm gap-1">
                 <button
                   type="button"
@@ -180,6 +228,13 @@ export default function LoginPage() {
                 </button>
               </div>
 
+              {/* API Error Display */}
+              {errors.api && (
+                <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 backdrop-blur-sm">
+                  <p className="text-red-400 text-sm sm:text-xs">{errors.api}</p>
+                </div>
+              )}
+
               {/* Email Field */}
               <div className="space-y-2">
                 <label className="text-sm sm:text-xs font-medium text-gray-200 block">
@@ -198,6 +253,7 @@ export default function LoginPage() {
                       errors.email ? 'border-red-400' : 'border-white/20'
                     } rounded-2xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent backdrop-blur-sm transition-all duration-300 text-base sm:text-sm`}
                     placeholder="Enter your email"
+                    disabled={isLoading}
                   />
                 </div>
                 {errors.email && (
@@ -223,11 +279,13 @@ export default function LoginPage() {
                       errors.password ? 'border-red-400' : 'border-white/20'
                     } rounded-2xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent backdrop-blur-sm transition-all duration-300 text-base sm:text-sm`}
                     placeholder="Enter your password"
+                    disabled={isLoading}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-white transition-colors duration-200"
+                    disabled={isLoading}
                   >
                     {showPassword ? <EyeOff className="h-5 w-5 sm:h-4 sm:w-4" /> : <Eye className="h-5 w-5 sm:h-4 sm:w-4" />}
                   </button>
@@ -243,6 +301,7 @@ export default function LoginPage() {
                   type="button"
                   onClick={handleForgotPassword}
                   className="text-sm sm:text-xs text-purple-300 hover:text-purple-200 transition-colors duration-200"
+                  disabled={isLoading}
                 >
                   Forgot your password?
                 </button>
@@ -252,7 +311,6 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={isLoading}
-                onClick={handleSubmit}
                 className="w-full bg-gradient-to-r from-purple-500 to-cyan-500 text-white py-4 sm:py-3 px-6 rounded-2xl font-semibold shadow-2xl hover:shadow-purple-500/25 transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center text-base sm:text-sm"
               >
                 {isLoading ? (
@@ -267,7 +325,7 @@ export default function LoginPage() {
                   </div>
                 )}
               </button>
-            </div>
+            </form>
 
             {/* Footer */}
             <div className="mt-8 sm:mt-6 text-center">

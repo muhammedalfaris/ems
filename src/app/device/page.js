@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Smartphone, Plus, Trash2, Building, Calendar, Settings, X, Check } from 'lucide-react';
+import { Smartphone, Plus, Trash2, X, Check } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 
 const API_BASE_URL = 'https://emsapi.disagglobal.com/api/devices';
@@ -24,8 +24,14 @@ export default function DevicePage() {
     try {
       setLoading(true);
       setError('');
-      
-      const response = await fetch(`${API_BASE_URL}/list`);
+      const token = sessionStorage.getItem('access_token');
+      const response = await fetch(`${API_BASE_URL}/list`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+      });
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -57,10 +63,12 @@ export default function DevicePage() {
     try {
       setSubmitting(true);
       setError('');
-      
+      const token = sessionStorage.getItem('access_token');
       const response = await fetch(`${API_BASE_URL}/store`, {
         method: 'POST',
         headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -91,10 +99,12 @@ export default function DevicePage() {
     try {
       setDeleting(deviceId);
       setError('');
-      
+      const token = sessionStorage.getItem('access_token');
       const response = await fetch(`${API_BASE_URL}/destroy`, {
         method: 'DELETE',
         headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -124,9 +134,9 @@ export default function DevicePage() {
   // Calculate stats
   const today = new Date();
   const todayStr = today.toISOString().split('T')[0];
-  const addedToday = devices.filter(device => device.date === todayStr).length;
-  const enrollmentDevices = devices.filter(device => device.mode === 'enrollment').length;
-  const attendanceDevices = devices.filter(device => device.mode === 'attendance').length;
+  // const addedToday = devices.filter(device => device.date === todayStr).length;
+  // const enrollmentDevices = devices.filter(device => device.mode === 'enrollment').length;
+  // const attendanceDevices = devices.filter(device => device.mode === 'attendance').length;
 
   const handleAddDevice = () => {
     setShowAddModal(true);
