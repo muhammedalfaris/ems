@@ -19,7 +19,7 @@ export default function Navbar({ activeTab = 'users' }) {
     users: '/users',
     manage: '/manage',
     userlog: '/userlog',
-    devices: '/devices',
+    devices: '/device',
     profile: '/profile',
   };
   if (routes[tabId]) {
