@@ -17,7 +17,7 @@ export default function Navbar({ activeTab = 'users' }) {
   const handleNavClick = (tabId) => {
     const routes = {
     users: '/users',
-    manage: '/manage',
+    manage: '/manage-users',
     userlog: '/userlog',
     devices: '/device',
     profile: '/profile',
