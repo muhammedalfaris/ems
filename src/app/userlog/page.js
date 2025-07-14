@@ -18,60 +18,8 @@ export default function UserLogPage() {
   const [logs, setLogs] = useState([]);
   const [isFiltered, setIsFiltered] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  // Sample log data that would be returned after filtering
-  const sampleLogs = [
-    {
-      id: 1,
-      name: 'John Doe',
-      serialNumber: 'SN001',
-      fingerId: 'FID001',
-      deviceDept: 'IT Department',
-      date: '2024-03-15',
-      timeIn: '09:00:00',
-      timeOut: '17:30:00'
-    },
-    {
-      id: 2,
-      name: 'Sarah Johnson',
-      serialNumber: 'SN002',
-      fingerId: 'FID002',
-      deviceDept: 'HR Department',
-      date: '2024-03-15',
-      timeIn: '08:45:00',
-      timeOut: '17:15:00'
-    },
-    {
-      id: 3,
-      name: 'Michael Chen',
-      serialNumber: 'SN003',
-      fingerId: 'FID003',
-      deviceDept: 'Finance Department',
-      date: '2024-03-15',
-      timeIn: '09:15:00',
-      timeOut: '18:00:00'
-    },
-    {
-      id: 4,
-      name: 'Emily Davis',
-      serialNumber: 'SN004',
-      fingerId: 'FID004',
-      deviceDept: 'Marketing Department',
-      date: '2024-03-15',
-      timeIn: '08:30:00',
-      timeOut: '17:00:00'
-    },
-    {
-      id: 5,
-      name: 'David Wilson',
-      serialNumber: 'SN005',
-      fingerId: 'FID005',
-      deviceDept: 'IT Department',
-      date: '2024-03-15',
-      timeIn: '09:30:00',
-      timeOut: '18:15:00'
-    }
-  ];
 
   const handleFilterChange = (field, value) => {
     setFilters(prev => ({
@@ -82,12 +30,60 @@ export default function UserLogPage() {
 
   const handleFilter = async () => {
     setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setLogs(sampleLogs);
+    setError('');
+
+    try {
+      // Build query parameters
+      const params = new URLSearchParams();
+      const token = sessionStorage.getItem('access_token');
+      
+      if (filters.fromDate) params.append('date_from', filters.fromDate);
+      if (filters.toDate) params.append('date_to', filters.toDate);
+      if (filters.fromTime) params.append('time_from', filters.fromTime);
+      if (filters.toTime) params.append('time_to', filters.toTime);
+      if (filters.department) params.append('device_dep', filters.department);
+      if (filters.employeeName) params.append('username', filters.employeeName);
+
+      const apiUrl = `https://emsapi.disagglobal.com/api/logs?${params.toString()}`;
+
+      const response = await fetch(apiUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      
+      // Transform API data to match our component structure
+      const transformedLogs = result.data.map(log => ({
+        id: log.id,
+        name: log.username,
+        serialNumber: log.serialnumber,
+        fingerId: log.fingerprint_id,
+        deviceDept: log.device_dep,
+        date: log.checkindate,
+        timeIn: log.timein,
+        timeOut: log.timeout,
+        deviceUid: log.device_uid,
+        deviceBranch: log.device_branch,
+        fingerout: log.fingerout
+      }));
+
+      setLogs(transformedLogs);
       setIsFiltered(true);
+    } catch (err) {
+      setError(`Failed to fetch logs: ${err.message}`);
+      console.error('Error fetching logs:', err);
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   const handleClearFilters = () => {
@@ -102,6 +98,7 @@ export default function UserLogPage() {
     });
     setLogs([]);
     setIsFiltered(false);
+    setError('');
   };
 
   const handleExportExcel = () => {
@@ -111,15 +108,55 @@ export default function UserLogPage() {
   };
 
   const calculateWorkingHours = (timeIn, timeOut) => {
-    const [inHour, inMin] = timeIn.split(':').map(Number);
-    const [outHour, outMin] = timeOut.split(':').map(Number);
+    if (!timeIn || !timeOut) return 'N/A';
     
-    const inMinutes = inHour * 60 + inMin;
-    const outMinutes = outHour * 60 + outMin;
+    const [inHour, inMin, inSec] = timeIn.split(':').map(Number);
+    const [outHour, outMin, outSec] = timeOut.split(':').map(Number);
+    
+    const inMinutes = inHour * 60 + inMin + (inSec / 60);
+    const outMinutes = outHour * 60 + outMin + (outSec / 60);
     const diffMinutes = outMinutes - inMinutes;
     
+    if (diffMinutes < 0) return 'N/A';
+    
     const hours = Math.floor(diffMinutes / 60);
-    const minutes = diffMinutes % 60;
+    const minutes = Math.floor(diffMinutes % 60);
+    
+    return `${hours}h ${minutes}m`;
+  };
+
+  const getUniqueEmployees = () => {
+    const uniqueNames = new Set(logs.map(log => log.name));
+    return uniqueNames.size;
+  };
+
+  const getAverageWorkingHours = () => {
+    if (logs.length === 0) return '0h';
+    
+    let totalMinutes = 0;
+    let validLogs = 0;
+    
+    logs.forEach(log => {
+      if (log.timeIn && log.timeOut) {
+        const [inHour, inMin, inSec] = log.timeIn.split(':').map(Number);
+        const [outHour, outMin, outSec] = log.timeOut.split(':').map(Number);
+        
+        const inMinutes = inHour * 60 + inMin + (inSec / 60);
+        const outMinutes = outHour * 60 + outMin + (outSec / 60);
+        const diffMinutes = outMinutes - inMinutes;
+        
+        if (diffMinutes > 0) {
+          totalMinutes += diffMinutes;
+          validLogs++;
+        }
+      }
+    });
+    
+    if (validLogs === 0) return '0h';
+    
+    const avgMinutes = totalMinutes / validLogs;
+    const hours = Math.floor(avgMinutes / 60);
+    const minutes = Math.floor(avgMinutes % 60);
     
     return `${hours}h ${minutes}m`;
   };
@@ -155,10 +192,8 @@ export default function UserLogPage() {
       </div>
 
       <div className="relative z-10">
-        {/* Navbar */}
-        <Navbar activeTab="userlog" />
-
         {/* Main Content */}
+          <Navbar activeTab="userlog" />
         <div className="px-4 mt-18 md:px-8 py-6">
           {/* Header */}
           <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
@@ -258,33 +293,35 @@ export default function UserLogPage() {
 
               <div>
                 <label className="block text-gray-300 text-sm font-medium mb-2">Department</label>
-                <select
-                  value={filters.department}
-                  onChange={(e) => handleFilterChange('department', e.target.value)}
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-black focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                >
-                  <option value="">All Departments</option>
-                  <option value="IT Department">IT Department</option>
-                  <option value="HR Department">HR Department</option>
-                  <option value="Finance Department">Finance Department</option>
-                  <option value="Marketing Department">Marketing Department</option>
-                </select>
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Enter department..."
+                    value={filters.department}
+                    onChange={(e) => handleFilterChange('department', e.target.value)}
+                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  />
+                </div>
               </div>
 
               <div>
                 <label className="block text-gray-300 text-sm font-medium mb-2">Device</label>
-                <select
+                <input
+                  type="text"
+                  placeholder="Enter device..."
                   value={filters.device}
                   onChange={(e) => handleFilterChange('device', e.target.value)}
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-black focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                >
-                  <option value="">All Devices</option>
-                  <option value="Device-01">Device-01</option>
-                  <option value="Device-02">Device-02</option>
-                  <option value="Device-03">Device-03</option>
-                </select>
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                />
               </div>
             </div>
+
+            {/* Error Message */}
+            {error && (
+              <div className="mb-4 p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400">
+                {error}
+              </div>
+            )}
 
             {/* Filter Buttons */}
             <div className="flex flex-col sm:flex-row gap-4">
@@ -343,7 +380,7 @@ export default function UserLogPage() {
                     </div>
                     <div className="ml-4">
                       <p className="text-gray-300 text-sm">Unique Employees</p>
-                      <p className="text-2xl font-bold text-white">{logs.length}</p>
+                      <p className="text-2xl font-bold text-white">{getUniqueEmployees()}</p>
                     </div>
                   </div>
                 </div>
@@ -355,7 +392,7 @@ export default function UserLogPage() {
                     </div>
                     <div className="ml-4">
                       <p className="text-gray-300 text-sm">Avg. Working Hours</p>
-                      <p className="text-2xl font-bold text-white">8.5h</p>
+                      <p className="text-2xl font-bold text-white">{getAverageWorkingHours()}</p>
                     </div>
                   </div>
                 </div>
@@ -363,80 +400,92 @@ export default function UserLogPage() {
 
               {/* Logs Table */}
               <div className="backdrop-blur-lg bg-white/10 rounded-2xl border border-white/20 overflow-hidden">
-                {/* Desktop Table */}
-                <div className="hidden lg:block overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-white/5 border-b border-white/10">
-                      <tr>
-                        <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">ID</th>
-                        <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Name</th>
-                        <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Serial Number</th>
-                        <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Finger ID</th>
-                        <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Device Dept</th>
-                        <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Date</th>
-                        <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Time In</th>
-                        <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Time Out</th>
-                        <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Working Hours</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-white/10">
-                      {logs.map((log) => (
-                        <tr key={log.id} className="hover:bg-white/5 transition-colors duration-200">
-                          <td className="px-6 py-4 text-gray-300">{log.id}</td>
-                          <td className="px-6 py-4 text-white font-medium">{log.name}</td>
-                          <td className="px-6 py-4 text-purple-300">{log.serialNumber}</td>
-                          <td className="px-6 py-4 text-cyan-300">{log.fingerId}</td>
-                          <td className="px-6 py-4 text-gray-300">{log.deviceDept}</td>
-                          <td className="px-6 py-4 text-gray-300">{log.date}</td>
-                          <td className="px-6 py-4 text-green-400">{log.timeIn}</td>
-                          <td className="px-6 py-4 text-red-400">{log.timeOut}</td>
-                          <td className="px-6 py-4 text-yellow-400 font-semibold">
-                            {calculateWorkingHours(log.timeIn, log.timeOut)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Mobile/Tablet Cards */}
-                <div className="lg:hidden">
-                  {logs.map((log) => (
-                    <div key={log.id} className="p-4 border-b border-white/10 last:border-b-0">
-                      <div className="flex justify-between items-start mb-3">
-                        <div>
-                          <h3 className="text-white font-semibold text-lg">{log.name}</h3>
-                          <p className="text-gray-300 text-sm">ID: {log.id} | {log.serialNumber}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-yellow-400 font-semibold text-sm">
-                            {calculateWorkingHours(log.timeIn, log.timeOut)}
-                          </p>
-                          <p className="text-gray-400 text-xs">Working Hours</p>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-3 text-sm">
-                        <div>
-                          <p className="text-gray-400">Finger ID</p>
-                          <p className="text-cyan-300">{log.fingerId}</p>
-                        </div>
-                        <div>
-                          <p className="text-gray-400">Department</p>
-                          <p className="text-white">{log.deviceDept}</p>
-                        </div>
-                        <div>
-                          <p className="text-gray-400">Date</p>
-                          <p className="text-white">{log.date}</p>
-                        </div>
-                        <div>
-                          <p className="text-gray-400">Time In/Out</p>
-                          <p className="text-green-400">{log.timeIn}</p>
-                          <p className="text-red-400">{log.timeOut}</p>
-                        </div>
-                      </div>
+                {logs.length === 0 ? (
+                  <div className="p-12 text-center">
+                    <div className="p-4 bg-gradient-to-r from-gray-500 to-gray-600 rounded-full w-20 h-20 mx-auto mb-6 flex items-center justify-center">
+                      <Search className="w-10 h-10 text-white" />
                     </div>
-                  ))}
-                </div>
+                    <h3 className="text-xl font-semibold text-white mb-2">No Logs Found</h3>
+                    <p className="text-gray-300">Try adjusting your filters to find matching records</p>
+                  </div>
+                ) : (
+                  <>
+                    {/* Desktop Table */}
+                    <div className="hidden lg:block overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-white/5 border-b border-white/10">
+                          <tr>
+                            <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">ID</th>
+                            <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Name</th>
+                            <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Serial Number</th>
+                            <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Finger ID</th>
+                            <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Device Dept</th>
+                            <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Date</th>
+                            <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Time In</th>
+                            <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Time Out</th>
+                            <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Working Hours</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/10">
+                          {logs.map((log) => (
+                            <tr key={log.id} className="hover:bg-white/5 transition-colors duration-200">
+                              <td className="px-6 py-4 text-gray-300">{log.id}</td>
+                              <td className="px-6 py-4 text-white font-medium">{log.name}</td>
+                              <td className="px-6 py-4 text-purple-300">{log.serialNumber}</td>
+                              <td className="px-6 py-4 text-cyan-300">{log.fingerId}</td>
+                              <td className="px-6 py-4 text-gray-300">{log.deviceDept}</td>
+                              <td className="px-6 py-4 text-gray-300">{log.date}</td>
+                              <td className="px-6 py-4 text-green-400">{log.timeIn}</td>
+                              <td className="px-6 py-4 text-red-400">{log.timeOut}</td>
+                              <td className="px-6 py-4 text-yellow-400 font-semibold">
+                                {calculateWorkingHours(log.timeIn, log.timeOut)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Mobile/Tablet Cards */}
+                    <div className="lg:hidden">
+                      {logs.map((log) => (
+                        <div key={log.id} className="p-4 border-b border-white/10 last:border-b-0">
+                          <div className="flex justify-between items-start mb-3">
+                            <div>
+                              <h3 className="text-white font-semibold text-lg">{log.name}</h3>
+                              <p className="text-gray-300 text-sm">ID: {log.id} | {log.serialNumber}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-yellow-400 font-semibold text-sm">
+                                {calculateWorkingHours(log.timeIn, log.timeOut)}
+                              </p>
+                              <p className="text-gray-400 text-xs">Working Hours</p>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3 text-sm">
+                            <div>
+                              <p className="text-gray-400">Finger ID</p>
+                              <p className="text-cyan-300">{log.fingerId}</p>
+                            </div>
+                            <div>
+                              <p className="text-gray-400">Department</p>
+                              <p className="text-white">{log.deviceDept}</p>
+                            </div>
+                            <div>
+                              <p className="text-gray-400">Date</p>
+                              <p className="text-white">{log.date}</p>
+                            </div>
+                            <div>
+                              <p className="text-gray-400">Time In/Out</p>
+                              <p className="text-green-400">{log.timeIn}</p>
+                              <p className="text-red-400">{log.timeOut}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
             </>
           )}
