@@ -71,8 +71,7 @@ export default function ManageUsersPage() {
       ...prev,
       [name]: value
     }));
-    
-    // Clear error when user starts typing
+
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
@@ -335,7 +334,7 @@ export default function ManageUsersPage() {
                       Gender
                     </label>
                     <div className="flex flex-wrap gap-4">
-                      {['Male', 'Female', 'Other'].map(gender => (
+                      {['Male', 'Female',].map(gender => (
                         <label key={gender} className="flex items-center cursor-pointer">
                           <input
                             type="radio"

@@ -95,9 +95,9 @@ export default function DevicePage() {
   };
 
   // Delete device via API
-  const deleteDevice = async (deviceId) => {
+  const deleteDevice = async (deviceName) => {
     try {
-      setDeleting(deviceId);
+      setDeleting(deviceName);
       setError('');
       const token = sessionStorage.getItem('access_token');
       const response = await fetch(`${API_BASE_URL}/destroy`, {
@@ -108,7 +108,7 @@ export default function DevicePage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          id: deviceId
+          device_name: deviceName
         })
       });
 
@@ -117,7 +117,7 @@ export default function DevicePage() {
       }
 
       // Remove device from local state
-      setDevices(devices.filter(device => device.id !== deviceId));
+      setDevices(devices.filter(device => device.name !== deviceName));
     } catch (error) {
       console.error('Error deleting device:', error);
       setError('Failed to delete device. Please try again.');
@@ -126,7 +126,6 @@ export default function DevicePage() {
     }
   };
 
-  // Load devices on component mount
   useEffect(() => {
     fetchDevices();
   }, []);
@@ -162,8 +161,10 @@ export default function DevicePage() {
   };
 
   const handleDeleteDevice = async (deviceId) => {
+    const device = devices.find(d => d.id === deviceId);
+    if (!device) return;
     if (window.confirm('Are you sure you want to delete this device?')) {
-      await deleteDevice(deviceId);
+      await deleteDevice(device.name);
     }
   };
 
