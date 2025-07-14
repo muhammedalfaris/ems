@@ -81,8 +81,6 @@ export default function DevicePage() {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-
-      // Refresh the devices list after successful addition
       await fetchDevices();
       return true;
     } catch (error) {

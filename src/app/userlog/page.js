@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Calendar, Clock, Filter, Download, Search, FileText, Users, Activity } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 
@@ -16,10 +16,50 @@ export default function UserLogPage() {
   });
 
   const [logs, setLogs] = useState([]);
+  const [devices, setDevices] = useState([]);
+  const [departments, setDepartments] = useState([]);
   const [isFiltered, setIsFiltered] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [devicesLoading, setDevicesLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Fetch devices on component mount
+  useEffect(() => {
+    fetchDevices();
+  }, []);
+
+  const fetchDevices = async () => {
+    setDevicesLoading(true);
+    try {
+      const token = sessionStorage.getItem('access_token');
+      
+      const response = await fetch('https://emsapi.disagglobal.com/api/devices/list', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const deviceData = await response.json();
+      setDevices(deviceData);
+      
+      // Extract unique departments from devices
+      const uniqueDepartments = [...new Set(deviceData.map(device => device["Device Department"]))];
+      setDepartments(uniqueDepartments);
+      
+    } catch (err) {
+      console.error('Error fetching devices:', err);
+      setError(`Failed to fetch devices: ${err.message}`);
+    } finally {
+      setDevicesLoading(false);
+    }
+  };
 
   const handleFilterChange = (field, value) => {
     setFilters(prev => ({
@@ -102,9 +142,46 @@ export default function UserLogPage() {
   };
 
   const handleExportExcel = () => {
-    // In a real application, this would generate and download an Excel file
-    alert('Exporting logs to Excel...');
-    console.log('Exporting logs:', logs);
+    if (logs.length === 0) {
+      alert('No data to export');
+      return;
+    }
+
+    // Prepare data for Excel export
+    const exportData = logs.map(log => ({
+      'ID': log.id,
+      'Name': log.name,
+      'Serial Number': log.serialNumber,
+      'Finger ID': log.fingerId,
+      'Device Department': log.deviceDept,
+      'Date': log.date,
+      'Time In': log.timeIn,
+      'Time Out': log.timeOut,
+      'Working Hours': calculateWorkingHours(log.timeIn, log.timeOut)
+    }));
+
+    // Convert to CSV format
+    const headers = Object.keys(exportData[0]);
+    const csvContent = [
+      headers.join(','),
+      ...exportData.map(row => 
+        headers.map(header => {
+          const value = row[header] || '';
+          return `"${value.toString().replace(/"/g, '""')}"`;
+        }).join(',')
+      )
+    ].join('\n');
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `user-logs-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const calculateWorkingHours = (timeIn, timeOut) => {
@@ -193,7 +270,7 @@ export default function UserLogPage() {
 
       <div className="relative z-10">
         {/* Main Content */}
-          <Navbar activeTab="userlog" />
+        <Navbar activeTab="userlog" />
         <div className="px-4 mt-18 md:px-8 py-6">
           {/* Header */}
           <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
@@ -294,25 +371,49 @@ export default function UserLogPage() {
               <div>
                 <label className="block text-gray-300 text-sm font-medium mb-2">Department</label>
                 <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Enter department..."
+                  <select
                     value={filters.department}
                     onChange={(e) => handleFilterChange('department', e.target.value)}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  />
+                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent appearance-none"
+                    disabled={devicesLoading}
+                  >
+                    <option value="">Select Department</option>
+                    {departments.map((dept, index) => (
+                      <option key={index} value={dept} className="bg-gray-800 text-white">
+                        {dept}
+                      </option>
+                    ))}
+                  </select>
+                  {devicesLoading && (
+                    <div className="absolute right-3 top-3">
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    </div>
+                  )}
                 </div>
               </div>
 
               <div>
                 <label className="block text-gray-300 text-sm font-medium mb-2">Device</label>
-                <input
-                  type="text"
-                  placeholder="Enter device..."
-                  value={filters.device}
-                  onChange={(e) => handleFilterChange('device', e.target.value)}
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                />
+                <div className="relative">
+                  <select
+                    value={filters.device}
+                    onChange={(e) => handleFilterChange('device', e.target.value)}
+                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent appearance-none"
+                    disabled={devicesLoading}
+                  >
+                    <option value="">Select Device</option>
+                    {devices.map((device, index) => (
+                      <option key={index} value={device["Device Name"]} className="bg-gray-800 text-white">
+                        {device["Device Name"]} - {device["Device Department"]}
+                      </option>
+                    ))}
+                  </select>
+                  {devicesLoading && (
+                    <div className="absolute right-3 top-3">
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 

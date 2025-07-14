@@ -67,18 +67,14 @@ export default function LoginPage() {
       const data = await response.json();
 
       if (response.ok) {
-        // Store access token in sessionStorage
         sessionStorage.setItem('access_token', data.access_token);
         sessionStorage.setItem('token_type', data.token_type);
         sessionStorage.setItem('admin_info', JSON.stringify(data.admin));
-        
-        // Optional: Store selected role for UI purposes
+
         sessionStorage.setItem('selected_role', formData.role);
-        
-        // Redirect to users page
+
         router.push('/users');
       } else {
-        // Handle API errors
         setErrors({
           api: data.message || 'Login failed. Please check your credentials.'
         });
@@ -95,7 +91,6 @@ export default function LoginPage() {
 
   const handleForgotPassword = () => {
     console.log('Forgot password clicked');
-    // You can implement forgot password functionality here
   };
 
   return (

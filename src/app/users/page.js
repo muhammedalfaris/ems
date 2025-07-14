@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Users, Smartphone, User, Plus, Edit, Trash2} from 'lucide-react';
 import Navbar from '@/components/Navbar';
+import { useRouter } from 'next/navigation';
 
 export default function HomePage() {
   const [employees, setEmployees] = useState([]);
@@ -11,6 +12,7 @@ export default function HomePage() {
   const today = new Date();
   const todayStr = today.toISOString().split('T')[0];
   const activeToday = employees.filter(emp => emp.date === todayStr).length;
+  const router = useRouter();
 
   // Fetch employees from API
   useEffect(() => {
@@ -57,7 +59,7 @@ export default function HomePage() {
   }, []);
 
   const handleAddEmployee = () => {
-    console.log('Add new employee');
+    router.push('/manage-users')
   };
 
   // const handleViewEmployee = (employee) => {

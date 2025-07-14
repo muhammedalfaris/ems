@@ -18,7 +18,6 @@ export default function ManageUsersPage() {
   const [successMessage, setSuccessMessage] = useState('');
   const [fingerprintLoading, setFingerprintLoading] = useState(false);
 
-  // Mock departments - replace with actual API call
   useEffect(() => {
     const mockDepartments = [
       { id: 1, name: 'Engineering' },
