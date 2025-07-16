@@ -516,10 +516,10 @@ export default function UserLogPage() {
                       <table className="w-full">
                         <thead className="bg-white/5 border-b border-white/10">
                           <tr>
-                            <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">ID</th>
+                            {/* <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">ID</th> */}
                             <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Name</th>
-                            <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Serial Number</th>
-                            <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Finger ID</th>
+                            <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Employee ID</th>
+                            {/* <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Finger ID</th> */}
                             <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Device Dept</th>
                             <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Date</th>
                             <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Time In</th>
@@ -530,10 +530,10 @@ export default function UserLogPage() {
                         <tbody className="divide-y divide-white/10">
                           {logs.map((log) => (
                             <tr key={log.id} className="hover:bg-white/5 transition-colors duration-200">
-                              <td className="px-6 py-4 text-gray-300">{log.id}</td>
+                              {/* <td className="px-6 py-4 text-gray-300">{log.id}</td>    */}
                               <td className="px-6 py-4 text-white font-medium">{log.name}</td>
                               <td className="px-6 py-4 text-purple-300">{log.serialNumber}</td>
-                              <td className="px-6 py-4 text-cyan-300">{log.fingerId}</td>
+                              {/* <td className="px-6 py-4 text-cyan-300">{log.fingerId}</td> */}
                               <td className="px-6 py-4 text-gray-300">{log.deviceDept}</td>
                               <td className="px-6 py-4 text-gray-300">{log.date}</td>
                               <td className="px-6 py-4 text-green-400">{log.timeIn}</td>
@@ -554,7 +554,7 @@ export default function UserLogPage() {
                           <div className="flex justify-between items-start mb-3">
                             <div>
                               <h3 className="text-white font-semibold text-lg">{log.name}</h3>
-                              <p className="text-gray-300 text-sm">ID: {log.id} | {log.serialNumber}</p>
+                              <p className="text-gray-300 text-sm">EMP ID: {log.serialNumber}</p>
                             </div>
                             <div className="text-right">
                               <p className="text-yellow-400 font-semibold text-sm">
@@ -564,10 +564,10 @@ export default function UserLogPage() {
                             </div>
                           </div>
                           <div className="grid grid-cols-2 gap-3 text-sm">
-                            <div>
+                            {/* <div>
                               <p className="text-gray-400">Finger ID</p>
                               <p className="text-cyan-300">{log.fingerId}</p>
-                            </div>
+                            </div> */}
                             <div>
                               <p className="text-gray-400">Department</p>
                               <p className="text-white">{log.deviceDept}</p>

@@ -339,7 +339,7 @@ export default function DevicePage() {
                         <tr>
                           <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Device Name</th>
                           <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Department</th>
-                          <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">UID</th>
+                          {/* <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">UID</th> */}
                           <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Date Added</th>
                           <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Mode</th>
                           <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Actions</th>
@@ -350,7 +350,7 @@ export default function DevicePage() {
                           <tr key={device.id} className="hover:bg-white/5 transition-colors duration-200">
                             <td className="px-6 py-4 text-white font-medium">{device.name}</td>
                             <td className="px-6 py-4 text-gray-300">{device.department}</td>
-                            <td className="px-6 py-4 text-purple-300 font-mono">{device.uid}</td>
+                            {/* <td className="px-6 py-4 text-purple-300 font-mono">{device.uid}</td> */}
                             <td className="px-6 py-4 text-gray-300">{device.date}</td>
                             <td className="px-6 py-4">
                               <select
@@ -403,10 +403,10 @@ export default function DevicePage() {
                           </button>
                         </div>
                         <div className="grid grid-cols-2 gap-3 text-sm">
-                          <div>
+                          {/* <div>
                             <p className="text-gray-400">UID</p>
                             <p className="text-purple-300 font-mono">{device.uid}</p>
-                          </div>
+                          </div> */}
                           <div>
                             <p className="text-gray-400">Date Added</p>
                             <p className="text-white">{device.date}</p>
@@ -473,7 +473,7 @@ export default function DevicePage() {
                   />
                 </div>
 
-                <div>
+                {/* <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
                     Device Mode
                   </label>
@@ -485,7 +485,7 @@ export default function DevicePage() {
                     <option value="0" className="bg-gray-800">Enrollment</option>
                     <option value="1" className="bg-gray-800">Attendance</option>
                   </select>
-                </div>
+                </div> */}
                 
                 <div className="flex space-x-3 pt-4">
                   <button

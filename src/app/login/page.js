@@ -59,8 +59,8 @@ export default function LoginPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          admin_email: formData.email,
-          admin_pwd: formData.password
+          email: formData.email,
+          password: formData.password
         })
       });
 
