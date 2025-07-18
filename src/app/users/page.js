@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { Users, Smartphone, User, Plus, Edit, Trash2} from 'lucide-react';
+import { Users, Smartphone, User, Plus, Edit, Trash2, Fingerprint} from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import { useRouter } from 'next/navigation';
 
@@ -42,12 +42,13 @@ export default function HomePage() {
         const transformedEmployees = result.data.map(employee => ({
           id: employee.id,
           name: employee.name,
-          employeeId: `EMP${employee.serialnumber.toString().padStart(3, '0')}`,
+          employeeId: employee.serialnumber,
           gender: employee.gender,
           hourlyPay: '₹25.00', // Default value since not provided in API
-          fingerId: `FID${employee.fingerprint_id.toString().padStart(3, '0')}`,
+          fingerId: employee.fingerprint_id,
           date: employee.date,
-          device: employee.device
+          device: employee.device,
+          fingerprintStatus: employee.fingerprint_status
         }));
         
         setEmployees(transformedEmployees);
@@ -105,6 +106,10 @@ export default function HomePage() {
 
   const handleDeleteEmployee = (employee) => {
     console.log('Delete employee:', employee);
+  };
+
+  const handleFingerprintAction = (employee) => {
+    console.log('Fingerprint action for employee:', employee);
   };
 
   // Calculate unique devices count
@@ -239,8 +244,8 @@ export default function HomePage() {
                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Name</th>
                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Employee ID</th>
                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Gender</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Hourly Pay</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Finger ID</th>
+                    {/* <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Hourly Pay</th> */}
+                    {/* <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Finger ID</th> */}
                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Date</th>
                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Device</th>
                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Actions</th>
@@ -252,8 +257,8 @@ export default function HomePage() {
                       <td className="px-6 py-4 text-white font-medium">{employee.name}</td>
                       <td className="px-6 py-4 text-gray-300">{employee.employeeId}</td>
                       <td className="px-6 py-4 text-gray-300">{employee.gender}</td>
-                      <td className="px-6 py-4 text-green-400 font-semibold">{employee.hourlyPay}</td>
-                      <td className="px-6 py-4 text-purple-300">{employee.fingerId}</td>
+                      {/* <td className="px-6 py-4 text-green-400 font-semibold">{employee.hourlyPay}</td> */}
+                      {/* <td className="px-6 py-4 text-purple-300">{employee.fingerId}</td> */}
                       <td className="px-6 py-4 text-gray-300">{employee.date}</td>
                       <td className="px-6 py-4 text-cyan-300">{employee.device}</td>
                       <td className="px-6 py-4">
@@ -264,6 +269,15 @@ export default function HomePage() {
                           >
                             <Eye className="w-4 h-4" />
                           </button> */}
+                          {employee.fingerprintStatus !== 'Added' && (
+                            <button
+                              onClick={() => handleFingerprintAction(employee)}
+                              className="p-2 text-blue-400 hover:text-blue-300 hover:bg-white/10 rounded-lg transition-all duration-200"
+                              title="Fingerprint Added"
+                            >
+                              <Fingerprint className="w-4 h-4" />
+                            </button>
+                          )}
                           <button
                             onClick={() => handleEditEmployee(employee)}
                             className="p-2 text-yellow-400 hover:text-yellow-300 hover:bg-white/10 rounded-lg transition-all duration-200"
@@ -300,6 +314,15 @@ export default function HomePage() {
                       >
                         <Eye className="w-4 h-4" />
                       </button> */}
+                      {employee.fingerprintStatus !== 'Added' && (
+                        <button
+                          onClick={() => handleFingerprintAction(employee)}
+                          className="p-2 text-blue-400 hover:text-blue-300 hover:bg-white/10 rounded-lg transition-all duration-200"
+                          title="Fingerprint Added"
+                        >
+                          <Fingerprint className="w-4 h-4" />
+                        </button>
+                      )}
                       <button
                         onClick={() => handleEditEmployee(employee)}
                         className="p-2 text-yellow-400 hover:text-yellow-300 hover:bg-white/10 rounded-lg transition-all duration-200"

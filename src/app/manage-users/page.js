@@ -17,17 +17,68 @@ export default function ManageUsersPage() {
   const [errors, setErrors] = useState({});
   const [successMessage, setSuccessMessage] = useState('');
   const [fingerprintLoading, setFingerprintLoading] = useState(false);
+  const [devicesLoading, setDevicesLoading] = useState(false);
  
+  // Fetch devices from API
+  const fetchDevices = async () => {
+    setDevicesLoading(true);
+    try {
+      const token = sessionStorage.getItem('access_token');
+      if (!token) {
+        throw new Error('No access token found');
+      }
+
+      const response = await fetch('https://emsapi.disagglobal.com/api/devices/list', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      // Transform the response data to match the expected format
+      // The response appears to be a single device object, but we'll handle it as an array
+      const deviceList = Array.isArray(data) ? data : [data];
+      
+      const transformedDevices = deviceList.map((device, index) => ({
+        id: index + 1,
+        name: device['Device Name'],
+        department: device['Device Department'],
+        displayName: `${device['Device Name']} (${device['Device Department']})`
+      }));
+
+      setDepartments(transformedDevices);
+    } catch (error) {
+      console.error('Error fetching devices:', error);
+      setErrors(prev => ({
+        ...prev,
+        devices: 'Failed to load devices. Please try again.'
+      }));
+      
+      // Fallback to mock data if API fails
+      const mockDepartments = [
+        { id: 1, name: 'Engineering', department: 'Tech', displayName: 'Engineering (Tech)' },
+        { id: 2, name: 'Human Resources', department: 'HR', displayName: 'Human Resources (HR)' },
+        { id: 3, name: 'Marketing', department: 'Marketing', displayName: 'Marketing (Marketing)' },
+        { id: 4, name: 'Sales', department: 'Sales', displayName: 'Sales (Sales)' },
+        { id: 5, name: 'Finance', department: 'Finance', displayName: 'Finance (Finance)' },
+        { id: 6, name: 'Operations', department: 'Operations', displayName: 'Operations (Operations)' }
+      ];
+      setDepartments(mockDepartments);
+    } finally {
+      setDevicesLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const mockDepartments = [
-      { id: 1, name: 'Engineering' },
-      { id: 2, name: 'Human Resources' },
-      { id: 3, name: 'Marketing' },
-      { id: 4, name: 'Sales' },
-      { id: 5, name: 'Finance' },
-      { id: 6, name: 'Operations' }
-    ];
-    setDepartments(mockDepartments);
+    fetchDevices();
   }, []);
 
   const validateForm = () => {
@@ -37,14 +88,15 @@ export default function ManageUsersPage() {
       newErrors.department = 'Department is required';
     }
 
-    if (!formData.fingerprintId) {
-      newErrors.fingerprintId = 'Fingerprint ID is required';
-    } else {
-      const id = parseInt(formData.fingerprintId);
-      if (isNaN(id) || id < 1 || id > 127) {
-        newErrors.fingerprintId = 'Fingerprint ID must be between 1 and 127';
-      }
-    }
+    // if (!formData.fingerprintId) {
+    //   newErrors.fingerprintId = 'Fingerprint ID is required';
+    // } 
+    // else {
+    //   const id = parseInt(formData.fingerprintId);
+    //   if (isNaN(id) || id < 1 || id > 127) {
+    //     newErrors.fingerprintId = 'Fingerprint ID must be between 1 and 127';
+    //   }
+    // }
 
     if (!formData.username.trim()) {
       newErrors.username = 'Username is required';
@@ -125,8 +177,38 @@ export default function ManageUsersPage() {
     setLoading(true);
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const token = sessionStorage.getItem('access_token');
+      if (!token) {
+        throw new Error('No access token found');
+      }
+
+      // Find the selected device to get just the device name
+      const selectedDevice = departments.find(dept => dept.displayName === formData.department);
+      const deviceName = selectedDevice ? selectedDevice.name : formData.department;
+
+      const payload = {
+        username: formData.username,
+        serialnumber: formData.serialNumber,
+        gender: formData.gender,
+        device_dep: deviceName
+      };
+
+      const response = await fetch('https://emsapi.disagglobal.com/api/manageusers', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
       
       // Reset form
       setFormData({
@@ -140,7 +222,8 @@ export default function ManageUsersPage() {
       setSuccessMessage('User added successfully!');
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (error) {
-      setErrors({ submit: 'Failed to add user. Please try again.' });
+      console.error('Error adding user:', error);
+      setErrors({ submit: error.message || 'Failed to add user. Please try again.' });
     } finally {
       setLoading(false);
     }
@@ -191,6 +274,13 @@ export default function ManageUsersPage() {
             </div>
           )}
 
+          {/* Error Message for Device Loading */}
+          {errors.devices && (
+            <div className="mb-6 p-4 bg-yellow-500/20 border border-yellow-500/30 rounded-xl backdrop-blur-lg">
+              <p className="text-yellow-300 text-sm md:text-base">{errors.devices}</p>
+            </div>
+          )}
+
           {/* Main Form Container */}
           <div className="max-w-4xl mx-auto">
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -211,12 +301,15 @@ export default function ManageUsersPage() {
                     name="department"
                     value={formData.department}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm md:text-base"
+                    disabled={devicesLoading}
+                    className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm md:text-base disabled:opacity-50"
                   >
-                    <option value="">Choose a device...</option>
+                    <option value="">
+                      {devicesLoading ? 'Loading devices...' : 'Choose a device...'}
+                    </option>
                     {departments.map(dept => (
-                      <option key={dept.id} value={dept.name} className="bg-slate-800">
-                        {dept.name}
+                      <option key={dept.id} value={dept.displayName} className="bg-slate-800">
+                        {dept.displayName}
                       </option>
                     ))}
                   </select>
