@@ -79,41 +79,41 @@ export default function ManageUsersPage() {
     }
   };
 
-  const handleAddFingerprint = async () => {
-    if (!formData.fingerprintId) {
-      setErrors(prev => ({
-        ...prev,
-        fingerprintId: 'Please enter a fingerprint ID first'
-      }));
-      return;
-    }
+  // const handleAddFingerprint = async () => {
+  //   if (!formData.fingerprintId) {
+  //     setErrors(prev => ({
+  //       ...prev,
+  //       fingerprintId: 'Please enter a fingerprint ID first'
+  //     }));
+  //     return;
+  //   }
 
-    const id = parseInt(formData.fingerprintId);
-    if (isNaN(id) || id < 1 || id > 127) {
-      setErrors(prev => ({
-        ...prev,
-        fingerprintId: 'Fingerprint ID must be between 1 and 127'
-      }));
-      return;
-    }
+  //   const id = parseInt(formData.fingerprintId);
+  //   if (isNaN(id) || id < 1 || id > 127) {
+  //     setErrors(prev => ({
+  //       ...prev,
+  //       fingerprintId: 'Fingerprint ID must be between 1 and 127'
+  //     }));
+  //     return;
+  //   }
 
-    setFingerprintLoading(true);
+  //   setFingerprintLoading(true);
     
-    try {
-      // Simulate API call for fingerprint registration
-      await new Promise(resolve => setTimeout(resolve, 2000));
+  //   try {
+  //     // Simulate API call for fingerprint registration
+  //     await new Promise(resolve => setTimeout(resolve, 2000));
       
-      setSuccessMessage(`Fingerprint ID ${id} registered successfully! Please place finger on scanner.`);
-      setTimeout(() => setSuccessMessage(''), 3000);
-    } catch (error) {
-      setErrors(prev => ({
-        ...prev,
-        fingerprintId: 'Failed to register fingerprint. Please try again.'
-      }));
-    } finally {
-      setFingerprintLoading(false);
-    }
-  };
+  //     setSuccessMessage(`Fingerprint ID ${id} registered successfully! Please place finger on scanner.`);
+  //     setTimeout(() => setSuccessMessage(''), 3000);
+  //   } catch (error) {
+  //     setErrors(prev => ({
+  //       ...prev,
+  //       fingerprintId: 'Failed to register fingerprint. Please try again.'
+  //     }));
+  //   } finally {
+  //     setFingerprintLoading(false);
+  //   }
+  // };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
