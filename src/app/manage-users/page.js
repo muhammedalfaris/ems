@@ -17,7 +17,7 @@ export default function ManageUsersPage() {
   const [errors, setErrors] = useState({});
   const [successMessage, setSuccessMessage] = useState('');
   const [fingerprintLoading, setFingerprintLoading] = useState(false);
-
+ 
   useEffect(() => {
     const mockDepartments = [
       { id: 1, name: 'Engineering' },
@@ -200,12 +200,12 @@ export default function ManageUsersPage() {
                   <div className="p-2 bg-gradient-to-r from-purple-500 to-cyan-500 rounded-xl mr-3">
                     <Building className="w-5 h-5 text-white" />
                   </div>
-                  <h2 className="text-lg md:text-xl font-semibold text-white">Department</h2>
+                  <h2 className="text-lg md:text-xl font-semibold text-white">Device</h2>
                 </div>
                 
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-300">
-                    Select Department
+                    Select Device
                   </label>
                   <select
                     name="department"
@@ -213,7 +213,7 @@ export default function ManageUsersPage() {
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm md:text-base"
                   >
-                    <option value="">Choose a department...</option>
+                    <option value="">Choose a device...</option>
                     {departments.map(dept => (
                       <option key={dept.id} value={dept.name} className="bg-slate-800">
                         {dept.name}
@@ -227,7 +227,7 @@ export default function ManageUsersPage() {
               </div>
 
               {/* Fingerprint Section */}
-              <div className="backdrop-blur-lg bg-white/10 rounded-2xl p-4 md:p-6 border border-white/20">
+              {/* <div className="backdrop-blur-lg bg-white/10 rounded-2xl p-4 md:p-6 border border-white/20">
                 <div className="flex items-center mb-4">
                   <div className="p-2 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl mr-3">
                     <Fingerprint className="w-5 h-5 text-white" />
@@ -279,7 +279,7 @@ export default function ManageUsersPage() {
                     )}
                   </div>
                 </div>
-              </div>
+              </div> */}
 
               {/* User Information */}
               <div className="backdrop-blur-lg bg-white/10 rounded-2xl p-4 md:p-6 border border-white/20">

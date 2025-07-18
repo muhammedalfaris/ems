@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { useState, useEffect, useContext } from 'react';
 import { Users, Smartphone, User, Plus, Edit, Trash2} from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import { useRouter } from 'next/navigation';
@@ -11,12 +12,15 @@ export default function HomePage() {
   const [error, setError] = useState(null);
   const today = new Date();
   const todayStr = today.toISOString().split('T')[0];
-  const activeToday = employees.filter(emp => emp.date === todayStr).length;
+  const [activeToday, setActiveToday] = useState(0);
   const router = useRouter();
 
-  // Fetch employees from API
   useEffect(() => {
-    const fetchEmployees = async () => {
+    fetchEmployees();
+    fetchActiveCount();
+  }, []);
+
+  const fetchEmployees = async () => {
       try {
         setLoading(true);
         const token = sessionStorage.getItem('access_token');
@@ -55,8 +59,37 @@ export default function HomePage() {
       }
     };
 
-    fetchEmployees();
-  }, []);
+    const fetchActiveCount = async() =>{
+    try{
+      setLoading(true);
+      const token = sessionStorage.getItem('access_token')
+      const response = await fetch('https://emsapi.disagglobal.com/api/logs/today/active-count', {
+        headers :{
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if(!response.ok){
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const countResult = await response.json();
+      
+      if (countResult?.active_user_count !== undefined) {
+        setActiveToday(countResult.active_user_count);
+      }
+        
+    }
+    catch(err){
+      setError(err.message);
+      console.error('Error fetching employees:', err);
+    }
+    finally {
+      setLoading(false);
+    }
+  }
 
   const handleAddEmployee = () => {
     router.push('/manage-users')
@@ -169,17 +202,19 @@ export default function HomePage() {
               </div>
             </div>
             
-            <div className="backdrop-blur-lg bg-white/10 rounded-2xl p-6 border border-white/20">
-              <div className="flex items-center">
-                <div className="p-3 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl">
-                  <User className="w-6 h-6 text-white" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-gray-300 text-sm">Active Today</p>
-                 <p className="text-2xl font-bold text-white">{activeToday}</p>
+            <Link href="/userlog" passHref>
+              <div className="cursor-pointer backdrop-blur-lg bg-white/10 rounded-2xl p-6 border border-white/20 transition hover:scale-[1.01] hover:border-white/40">
+                <div className="flex items-center">
+                  <div className="p-3 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl">
+                    <User className="w-6 h-6 text-white" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-gray-300 text-sm">Active Today</p>
+                    <p className="text-2xl font-bold text-white">{activeToday}</p>
+                  </div>
                 </div>
               </div>
-            </div>
+            </Link>
             
             <div className="backdrop-blur-lg bg-white/10 rounded-2xl p-6 border border-white/20">
               <div className="flex items-center">
