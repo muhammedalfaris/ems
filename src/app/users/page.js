@@ -342,14 +342,14 @@ export default function HomePage() {
                       <p className="text-gray-400">Gender</p>
                       <p className="text-white">{employee.gender}</p>
                     </div>
-                    <div>
+                    {/* <div>
                       <p className="text-gray-400">Hourly Pay</p>
                       <p className="text-green-400 font-semibold">{employee.hourlyPay}</p>
-                    </div>
-                    <div>
+                    </div> */}
+                    {/* <div>
                       <p className="text-gray-400">Finger ID</p>
                       <p className="text-purple-300">{employee.fingerId}</p>
-                    </div>
+                    </div> */}
                     <div>
                       <p className="text-gray-400">Date</p>
                       <p className="text-white">{employee.date}</p>

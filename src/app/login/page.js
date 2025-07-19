@@ -184,7 +184,7 @@ export default function LoginPage() {
           <div className="backdrop-blur-lg bg-white/10 rounded-3xl p-8 sm:p-6 shadow-2xl border border-white/20">
             <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-5">
               {/* Role Selector - UI Only */}
-              <div className="grid grid-cols-3 bg-white/5 rounded-2xl p-1 backdrop-blur-sm gap-1">
+              {/* <div className="grid grid-cols-3 bg-white/5 rounded-2xl p-1 backdrop-blur-sm gap-1">
                 <button
                   type="button"
                   onClick={() => setFormData(prev => ({ ...prev, role: 'super-admin' }))}
@@ -221,7 +221,7 @@ export default function LoginPage() {
                   <Users className="w-4 h-4 mb-1" />
                   <span className="text-xs sm:text-[10px] font-medium leading-tight">Branch Admin</span>
                 </button>
-              </div>
+              </div> */}
 
               {/* API Error Display */}
               {errors.api && (
