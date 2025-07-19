@@ -518,7 +518,7 @@ export default function UserLogPage() {
               <div className="backdrop-blur-lg bg-white/10 rounded-2xl border border-white/20 p-12 text-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-6"></div>
                 <h3 className="text-xl font-semibold text-white mb-2">Loading...</h3>
-                <p className="text-gray-300">Fetching today's logs</p>
+                <p className="text-gray-300">Fetching today&apos;s logs</p>
               </div>
             ) : logs.length === 0 ? (
               <div className="backdrop-blur-lg bg-white/10 rounded-2xl border border-white/20 p-12 text-center">
