@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { Users, Smartphone, User, Plus, Edit, Trash2, Fingerprint} from 'lucide-react';
+import { Users, Smartphone, User, Plus, Edit, Trash2, Fingerprint, X} from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import { useRouter } from 'next/navigation';
 
@@ -13,6 +13,9 @@ export default function HomePage() {
   const today = new Date();
   const todayStr = today.toISOString().split('T')[0];
   const [activeToday, setActiveToday] = useState(0);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [employeeToDelete, setEmployeeToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -60,7 +63,7 @@ export default function HomePage() {
       }
     };
 
-    const fetchActiveCount = async() =>{
+    const fetchActiveCount = async() => {
     try{
       setLoading(true);
       const token = sessionStorage.getItem('access_token')
@@ -105,7 +108,48 @@ export default function HomePage() {
   };
 
   const handleDeleteEmployee = (employee) => {
-    console.log('Delete employee:', employee);
+    setEmployeeToDelete(employee);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDeleteEmployee = async () => {
+    if (!employeeToDelete) return;
+    
+    try {
+      setIsDeleting(true);
+      const token = sessionStorage.getItem('access_token');
+      const response = await fetch(`https://emsapi.disagglobal.com/api/manageusers/${employeeToDelete.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // Remove the deleted employee from the state
+      setEmployees(employees.filter(emp => emp.id !== employeeToDelete.id));
+      
+      console.log('Employee deleted successfully:', employeeToDelete);
+      
+      // Close modal and reset state
+      setShowDeleteModal(false);
+      setEmployeeToDelete(null);
+    } catch (err) {
+      console.error('Error deleting employee:', err);
+      setError(err.message);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteModal(false);
+    setEmployeeToDelete(null);
   };
 
   const handleFingerprintAction = (employee) => {
@@ -365,6 +409,67 @@ export default function HomePage() {
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="backdrop-blur-lg bg-white/10 rounded-2xl border border-white/20 p-6 max-w-md w-full mx-4 shadow-2xl">
+            {/* Modal Header */}
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-white">Confirm Delete</h3>
+              <button
+                onClick={cancelDelete}
+                className="p-1 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200"
+                disabled={isDeleting}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="mb-6">
+              <div className="flex items-center mb-4">
+                <div className="p-3 bg-gradient-to-r from-red-500 to-pink-500 rounded-xl">
+                  <Trash2 className="w-6 h-6 text-white" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-gray-300 text-sm">You're about to delete</p>
+                  <p className="text-white font-semibold">{employeeToDelete?.name}</p>
+                  <p className="text-gray-400 text-sm">Employee ID: {employeeToDelete?.employeeId}</p>
+                </div>
+              </div>
+              <p className="text-gray-300 text-sm">
+                This action cannot be undone. This will permanently delete the employee record and all associated data.
+              </p>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex space-x-3">
+              <button
+                onClick={cancelDelete}
+                className="flex-1 bg-white/10 border border-white/20 text-white px-4 py-3 rounded-xl font-semibold hover:bg-white/20 transition-all duration-200"
+                disabled={isDeleting}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteEmployee}
+                disabled={isDeleting}
+                className="flex-1 bg-gradient-to-r from-red-500 to-pink-500 text-white px-4 py-3 rounded-xl font-semibold shadow-lg hover:shadow-red-500/25 transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+              >
+                {isDeleting ? (
+                  <div className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                    Deleting...
+                  </div>
+                ) : (
+                  'Delete Employee'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
     </>
   );
