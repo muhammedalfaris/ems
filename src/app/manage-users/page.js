@@ -16,7 +16,7 @@ export default function ManageUsersPage() {
     department: '',
     fingerprintId: '',
     username: '',
-    serialNumber: '',
+    employeeId: '',
     gender: ''
   });
   const [errors, setErrors] = useState({});
@@ -93,7 +93,7 @@ export default function ManageUsersPage() {
           department: String(data.device || ''),
           fingerprintId: '', // Not used
           username: String(data.name || ''),
-          serialNumber: String(data.employeeId || ''),
+          employeeId: String(data.employeeId || ''),
           gender: String(data.gender || ''),
         });
         // Optionally clear after use
@@ -125,8 +125,8 @@ export default function ManageUsersPage() {
       newErrors.username = 'Username must be at least 2 characters';
     }
 
-    if (!formData.serialNumber.trim()) {
-      newErrors.serialNumber = 'Serial number is required';
+    if (!formData.employeeId.trim()) {
+      newErrors.employeeId = 'Employee ID is required';
     }
 
     if (!formData.gender) {
@@ -209,7 +209,7 @@ export default function ManageUsersPage() {
 
       const payload = {
         username: formData.username,
-        serialnumber: formData.serialNumber,
+        serialnumber: formData.employeeId,
         gender: formData.gender,
         device_dep: deviceName
       };
@@ -254,7 +254,7 @@ export default function ManageUsersPage() {
           department: '',
           fingerprintId: '',
           username: '',
-          serialNumber: '',
+          employeeId: '',
           gender: ''
         });
         
@@ -442,21 +442,21 @@ export default function ManageUsersPage() {
                     )}
                   </div>
 
-                  {/* Serial Number */}
+                  {/* Employee ID */}
                   <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Serial Number
+                      Employee ID
                     </label>
                     <input
                       type="text"
-                      name="serialNumber"
-                      value={formData.serialNumber}
+                      name="employeeId"
+                      value={formData.employeeId}
                       onChange={handleInputChange}
-                      placeholder="Enter serial number"
+                      placeholder="Enter employee ID"
                       className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm md:text-base"
                     />
-                    {errors.serialNumber && (
-                      <p className="text-red-400 text-xs md:text-sm mt-1">{errors.serialNumber}</p>
+                    {errors.employeeId && (
+                      <p className="text-red-400 text-xs md:text-sm mt-1">{errors.employeeId}</p>
                     )}
                   </div>
 

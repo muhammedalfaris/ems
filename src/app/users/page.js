@@ -435,7 +435,7 @@ export default function HomePage() {
                   <Trash2 className="w-6 h-6 text-white" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-gray-300 text-sm">You're about to delete</p>
+                  <p className="text-gray-300 text-sm">You&apos;re about to delete</p>
                   <p className="text-white font-semibold">{employeeToDelete?.name}</p>
                   <p className="text-gray-400 text-sm">Employee ID: {employeeToDelete?.employeeId}</p>
                 </div>
