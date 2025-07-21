@@ -104,7 +104,9 @@ export default function HomePage() {
   // };
 
   const handleEditEmployee = (employee) => {
-    console.log('Edit employee:', employee);
+    // Store employee data in sessionStorage for editing
+    sessionStorage.setItem('editUserData', JSON.stringify(employee));
+    router.push(`/manage-users?id=${employee.id}`);
   };
 
   const handleDeleteEmployee = (employee) => {

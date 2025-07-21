@@ -3,8 +3,13 @@
 import { useState, useEffect } from 'react';
 import { Users, Fingerprint, UserPlus, Building, Hash, User, Save, RefreshCw } from 'lucide-react';
 import Navbar from '@/components/Navbar';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 export default function ManageUsersPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const editUserId = searchParams.get('id');
+  const isEditMode = !!editUserId;
   const [loading, setLoading] = useState(false);
   const [departments, setDepartments] = useState([]);
   const [formData, setFormData] = useState({
@@ -79,6 +84,22 @@ export default function ManageUsersPage() {
 
   useEffect(() => {
     fetchDevices();
+    if (isEditMode) {
+      // Get user data from sessionStorage
+      const stored = sessionStorage.getItem('editUserData');
+      if (stored) {
+        const data = JSON.parse(stored);
+        setFormData({
+          department: String(data.device || ''),
+          fingerprintId: '', // Not used
+          username: String(data.name || ''),
+          serialNumber: String(data.employeeId || ''),
+          gender: String(data.gender || ''),
+        });
+        // Optionally clear after use
+        // sessionStorage.removeItem('editUserData');
+      }
+    }
   }, []);
 
   const validateForm = () => {
@@ -193,37 +214,56 @@ export default function ManageUsersPage() {
         device_dep: deviceName
       };
 
-      const response = await fetch('https://emsapi.disagglobal.com/api/manageusers', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      });
+      let response;
+      if (isEditMode) {
+        response = await fetch(`https://emsapi.disagglobal.com/api/manageusers/${editUserId}`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+      } else {
+        response = await fetch('https://emsapi.disagglobal.com/api/manageusers', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+      }
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
       }
 
-      const result = await response.json();
-      
-      // Reset form
-      setFormData({
-        department: '',
-        fingerprintId: '',
-        username: '',
-        serialNumber: '',
-        gender: ''
-      });
-      
-      setSuccessMessage('User added successfully!');
-      setTimeout(() => setSuccessMessage(''), 3000);
+      if (isEditMode) {
+        setSuccessMessage('User updated successfully!');
+        setTimeout(() => {
+          setSuccessMessage('');
+          router.push('/users');
+        }, 1000);
+      } else {
+        // Reset form
+        setFormData({
+          department: '',
+          fingerprintId: '',
+          username: '',
+          serialNumber: '',
+          gender: ''
+        });
+        
+        setSuccessMessage('User added successfully!');
+        setTimeout(() => setSuccessMessage(''), 3000);
+      }
     } catch (error) {
       console.error('Error adding user:', error);
-      setErrors({ submit: error.message || 'Failed to add user. Please try again.' });
+      setErrors({ submit: error.message || 'Failed to add/edit user. Please try again.' });
     } finally {
       setLoading(false);
     }
@@ -263,8 +303,8 @@ export default function ManageUsersPage() {
         <div className="px-4 mt-18 md:px-8 py-6">
           {/* Header */}
           <div className="mb-8">
-            <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">Manage Users</h1>
-            <p className="text-gray-300 text-sm md:text-base">Add new employees to the system</p>
+            <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">{isEditMode ? 'Edit User' : 'Manage Users'}</h1>
+            <p className="text-gray-300 text-sm md:text-base">{isEditMode ? 'Edit employee details' : 'Add new employees to the system'}</p>
           </div>
 
           {/* Success Message */}
@@ -457,12 +497,12 @@ export default function ManageUsersPage() {
                   {loading ? (
                     <>
                       <RefreshCw className="w-5 h-5 mr-2 animate-spin" />
-                      Adding User...
+                      {isEditMode ? 'Updating User...' : 'Adding User...'}
                     </>
                   ) : (
                     <>
                       <UserPlus className="w-5 h-5 mr-2" />
-                      Add User
+                      {isEditMode ? 'Edit User' : 'Add User'}
                     </>
                   )}
                 </button>
