@@ -53,7 +53,7 @@ export default function LoginPage() {
     setErrors({});
 
     try {
-      const response = await fetch('https://emsapi.disagglobal.com/api/adminlogin', {
+      const response = await fetch('https://emsapi.disagglobal.com/api/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -335,6 +335,7 @@ export default function LoginPage() {
             <p className="text-gray-400 text-xs sm:text-[10px]">
               © 2025 Employee Management System. All rights reserved.
             </p>
+            <p className='mt-2 text-white'>Powered by DISAG</p>
           </div>
         </div>
       </div>
