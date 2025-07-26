@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { Users, Fingerprint, UserPlus, Building, Hash, User, Save, RefreshCw } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function ManageUsersPage() {
+function ManageUsersContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const editUserId = searchParams.get('id');
@@ -519,5 +519,32 @@ export default function ManageUsersPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Loading component for Suspense fallback
+function ManageUsersLoading() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
+      <div className="relative z-10">
+        <Navbar activeTab="manage" />
+        <div className="px-4 mt-18 md:px-8 py-6">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <RefreshCw className="w-8 h-8 text-white animate-spin mx-auto mb-4" />
+              <p className="text-gray-300">Loading...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function ManageUsersPage() {
+  return (
+    <Suspense fallback={<ManageUsersLoading />}>
+      <ManageUsersContent />
+    </Suspense>
   );
 }
