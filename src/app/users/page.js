@@ -17,6 +17,10 @@ export default function HomePage() {
   const [employeeToDelete, setEmployeeToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const router = useRouter();
+  // New state for fingerprint modal
+  const [showFingerprintModal, setShowFingerprintModal] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [fingerprintId, setFingerprintId] = useState('');
 
   useEffect(() => {
     fetchEmployees();
@@ -155,7 +159,25 @@ export default function HomePage() {
   };
 
   const handleFingerprintAction = (employee) => {
-    console.log('Fingerprint action for employee:', employee);
+    setSelectedEmployee(employee);
+    setShowFingerprintModal(true);
+  };
+
+  const handleScanFinger = () => {
+    console.log('Scanning finger for:', selectedEmployee);
+    console.log('Device:', selectedEmployee.device);
+    console.log('Fingerprint ID:', fingerprintId);
+    // Here you would typically call an API to register the fingerprint
+    // After successful registration, you can close the modal
+    setShowFingerprintModal(false);
+    setSelectedEmployee(null);
+    setFingerprintId('');
+  };
+
+  const closeFingerprintModal = () => {
+    setShowFingerprintModal(false);
+    setSelectedEmployee(null);
+    setFingerprintId('');
   };
 
   // Calculate unique devices count
@@ -467,6 +489,83 @@ export default function HomePage() {
                 ) : (
                   'Delete Employee'
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Fingerprint Registration Modal */}
+      {showFingerprintModal && selectedEmployee && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="backdrop-blur-lg bg-white/10 rounded-2xl border border-white/20 p-6 max-w-md w-full mx-4 shadow-2xl">
+            {/* Modal Header */}
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-white">Register Fingerprint</h3>
+              <button
+                onClick={closeFingerprintModal}
+                className="p-1 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="mb-6">
+              <div className="flex items-center mb-4">
+                <div className="p-3 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl">
+                  <Fingerprint className="w-6 h-6 text-white" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-gray-300 text-sm">Registering fingerprint for</p>
+                  <p className="text-white font-semibold">{selectedEmployee.name}</p>
+                  <p className="text-gray-400 text-sm">Employee ID: {selectedEmployee.employeeId}</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-gray-300 text-sm mb-2" htmlFor="device">
+                    Device
+                  </label>
+                  <input
+                    type="text"
+                    id="device"
+                    value={selectedEmployee.device || ''}
+                    readOnly
+                    className="w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-gray-300 text-sm mb-2" htmlFor="fingerprintId">
+                    Fingerprint ID
+                  </label>
+                  <input
+                    type="text"
+                    id="fingerprintId"
+                    value={fingerprintId}
+                    onChange={(e) => setFingerprintId(e.target.value)}
+                    className="w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Enter fingerprint ID"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex space-x-3">
+              <button
+                onClick={closeFingerprintModal}
+                className="flex-1 bg-white/10 border border-white/20 text-white px-4 py-3 rounded-xl font-semibold hover:bg-white/20 transition-all duration-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleScanFinger}
+                className="flex-1 bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-4 py-3 rounded-xl font-semibold shadow-lg hover:shadow-blue-500/25 transform hover:scale-105 transition-all duration-300"
+              >
+                Scan Finger
               </button>
             </div>
           </div>
