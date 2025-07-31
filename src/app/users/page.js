@@ -252,7 +252,7 @@ export default function HomePage() {
 
   const pollScanStatus = async (serialnumber, fingerprintId) => {
     let attempts = 0;
-    const maxAttempts = 50; // ~1 min
+    const maxAttempts = 70; // ~1 min
     const poll = async () => {
       try {
         const token = sessionStorage.getItem('access_token');
