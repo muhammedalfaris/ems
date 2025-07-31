@@ -1,7 +1,8 @@
 'use client';
 
+import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { Users, Smartphone, User, Plus, Edit, Trash2} from 'lucide-react';
+import { Users, Smartphone, User, Plus, Edit, Trash2, Fingerprint, X} from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import { useRouter } from 'next/navigation';
 
@@ -11,12 +12,27 @@ export default function HomePage() {
   const [error, setError] = useState(null);
   const today = new Date();
   const todayStr = today.toISOString().split('T')[0];
-  const activeToday = employees.filter(emp => emp.date === todayStr).length;
+  const [activeToday, setActiveToday] = useState(0);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [employeeToDelete, setEmployeeToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const router = useRouter();
+  // New state for fingerprint modal
+  const [showFingerprintModal, setShowFingerprintModal] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [fingerprintId, setFingerprintId] = useState('');
+  const [availableFingerprintIds, setAvailableFingerprintIds] = useState([]); // NEW
+  const [isFingerprintLoading, setIsFingerprintLoading] = useState(false); // NEW
+  const [isPolling, setIsPolling] = useState(false); // NEW
+  const [pollingMessage, setPollingMessage] = useState(''); // NEW
+  const [fingerprintSuccess, setFingerprintSuccess] = useState(false); // NEW
 
-  // Fetch employees from API
   useEffect(() => {
-    const fetchEmployees = async () => {
+    fetchEmployees();
+    fetchActiveCount();
+  }, []);
+
+  const fetchEmployees = async () => {
       try {
         setLoading(true);
         const token = sessionStorage.getItem('access_token');
@@ -38,12 +54,14 @@ export default function HomePage() {
         const transformedEmployees = result.data.map(employee => ({
           id: employee.id,
           name: employee.name,
-          employeeId: `EMP${employee.serialnumber.toString().padStart(3, '0')}`,
+          employeeId: employee.serialnumber,
           gender: employee.gender,
           hourlyPay: '₹25.00', // Default value since not provided in API
-          fingerId: `FID${employee.fingerprint_id.toString().padStart(3, '0')}`,
+          fingerId: employee.fingerprint_id,
           date: employee.date,
-          device: employee.device
+          device: employee.device,
+          device_uid : employee.device_uid,
+          fingerprintStatus: employee.fingerprint_status
         }));
         
         setEmployees(transformedEmployees);
@@ -55,8 +73,37 @@ export default function HomePage() {
       }
     };
 
-    fetchEmployees();
-  }, []);
+    const fetchActiveCount = async() => {
+    try{
+      setLoading(true);
+      const token = sessionStorage.getItem('access_token')
+      const response = await fetch('https://emsapi.disagglobal.com/api/logs/today/active-count', {
+        headers :{
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if(!response.ok){
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const countResult = await response.json();
+      
+      if (countResult?.active_user_count !== undefined) {
+        setActiveToday(countResult.active_user_count);
+      }
+        
+    }
+    catch(err){
+      setError(err.message);
+      console.error('Error fetching employees:', err);
+    }
+    finally {
+      setLoading(false);
+    }
+  }
 
   const handleAddEmployee = () => {
     router.push('/manage-users')
@@ -67,11 +114,214 @@ export default function HomePage() {
   // };
 
   const handleEditEmployee = (employee) => {
-    console.log('Edit employee:', employee);
+    // Store employee data in sessionStorage for editing
+    sessionStorage.setItem('editUserData', JSON.stringify(employee));
+    router.push(`/manage-users?id=${employee.id}`);
   };
 
   const handleDeleteEmployee = (employee) => {
-    console.log('Delete employee:', employee);
+    setEmployeeToDelete(employee);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDeleteEmployee = async () => {
+    if (!employeeToDelete) return;
+    
+    try {
+      setIsDeleting(true);
+      const token = sessionStorage.getItem('access_token');
+      const response = await fetch(`https://emsapi.disagglobal.com/api/manageusers/${employeeToDelete.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // Remove the deleted employee from the state
+      setEmployees(employees.filter(emp => emp.id !== employeeToDelete.id));
+      
+      console.log('Employee deleted successfully:', employeeToDelete);
+      
+      // Close modal and reset state
+      setShowDeleteModal(false);
+      setEmployeeToDelete(null);
+    } catch (err) {
+      console.error('Error deleting employee:', err);
+      setError(err.message);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteModal(false);
+    setEmployeeToDelete(null);
+  };
+
+  const handleFingerprintAction = async (employee) => {
+    setSelectedEmployee(employee);
+    setShowFingerprintModal(true);
+    setIsFingerprintLoading(true);
+    setFingerprintId('');
+    setAvailableFingerprintIds([]);
+    setFingerprintSuccess(false);
+    setPollingMessage('');
+    try {
+      const token = sessionStorage.getItem('access_token');
+      // Get available fingerprint IDs
+      const idsRes = await fetch(`https://emsapi.disagglobal.com/api/manageusers/fingerprint-ids?device_uid=${employee.device_uid}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+        },
+      });
+      if (!idsRes.ok) throw new Error('Failed to fetch available fingerprint IDs');
+      const idsData = await idsRes.json();
+      if (idsData.available_fingerprint_ids && idsData.available_fingerprint_ids.length > 0) {
+        setAvailableFingerprintIds(idsData.available_fingerprint_ids);
+        setFingerprintId(idsData.available_fingerprint_ids[0].toString());
+      } else {
+        setAvailableFingerprintIds([]);
+        setFingerprintId('');
+      }
+    } catch (err) {
+      setAvailableFingerprintIds([]);
+      setFingerprintId('');
+      setPollingMessage('Failed to fetch fingerprint data.');
+      console.error(err);
+    } finally {
+      setIsFingerprintLoading(false);
+    }
+  };
+
+  const handleScanFinger = async () => {
+    if (!selectedEmployee || !fingerprintId) return;
+    setIsFingerprintLoading(true);
+    setPollingMessage('Assigning fingerprint...');
+    setFingerprintSuccess(false);
+    try {
+      const token = sessionStorage.getItem('access_token');
+      await fetch('https://emsapi.disagglobal.com/api/manageusers/assign-fingerprint', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          serialnumber: selectedEmployee.employeeId,
+          device_uid: selectedEmployee.device_uid,
+          fingerprint_id: parseInt(fingerprintId)
+        }),
+      });
+      // Start polling for scan status
+      setIsPolling(true);
+      setPollingMessage('Waiting for fingerprint scan...');
+      pollScanStatus(selectedEmployee.employeeId, fingerprintId);
+    } catch (err) {
+      setPollingMessage('Failed to assign fingerprint.');
+      setIsFingerprintLoading(false);
+      setIsPolling(false);
+      console.error(err);
+    }
+  };
+
+  const deselectFingerprint = async (device_uid) => {
+    try {
+      const token = sessionStorage.getItem('access_token');
+      await fetch('https://emsapi.disagglobal.com/api/manageusers/deselect-fingerprint', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ device_uid }),
+      });
+    } catch (err) {
+      // Optionally log or ignore
+      console.error('Failed to deselect fingerprint:', err);
+    }
+  };
+
+  const pollScanStatus = async (serialnumber, fingerprintId) => {
+    let attempts = 0;
+    const maxAttempts = 30; // ~1 min
+    const poll = async () => {
+      try {
+        const token = sessionStorage.getItem('access_token');
+        const res = await fetch(`https://emsapi.disagglobal.com/api/manageusers/check-scan-status?serialnumber=${serialnumber}&device_uid=${selectedEmployee.device_uid}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json',
+          },
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          if (data.status === 'completed') {
+            setPollingMessage('Fingerprint scan completed and saved!');
+            setFingerprintSuccess(true);
+            setIsPolling(false);
+            // Deselect the fingerprint after success
+            await deselectFingerprint(selectedEmployee.device_uid);
+            setTimeout(() => {
+              setShowFingerprintModal(false);
+              setSelectedEmployee(null);
+              setFingerprintId('');
+              setAvailableFingerprintIds([]);
+              setFingerprintSuccess(false);
+              setPollingMessage('');
+              // Refresh the employees list to update fingerprint status
+              fetchEmployees();
+            }, 1500);
+            return;
+          } else if (data.status === 'failed') {
+            setPollingMessage('Fingerprint scan failed. Please try again.');
+            setIsPolling(false);
+            setIsFingerprintLoading(false);
+            await deselectFingerprint(selectedEmployee.device_uid);
+            return;
+          }
+        }
+        attempts++;
+        if (attempts < maxAttempts) {
+          setTimeout(poll, 2000);
+        } else {
+          setPollingMessage('Scan timed out. Please try again.');
+          setIsPolling(false);
+          setIsFingerprintLoading(false);
+          await deselectFingerprint(selectedEmployee.device_uid);
+        }
+      } catch (err) {
+        setPollingMessage('Error during scan status check.');
+        setIsPolling(false);
+        setIsFingerprintLoading(false);
+        await deselectFingerprint(selectedEmployee.device_uid);
+        console.error(err);
+      }
+    };
+    poll();
+  };
+
+  const closeFingerprintModal = async () => {
+    if (selectedEmployee && (isPolling || isFingerprintLoading)) {
+      await deselectFingerprint(selectedEmployee.device_uid);
+    }
+    setShowFingerprintModal(false);
+    setSelectedEmployee(null);
+    setFingerprintId('');
+    setAvailableFingerprintIds([]);
+    setFingerprintSuccess(false);
+    setPollingMessage('');
+    setIsFingerprintLoading(false);
+    setIsPolling(false);
   };
 
   // Calculate unique devices count
@@ -144,7 +394,7 @@ export default function HomePage() {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
             <div>
               <h1 className="text-3xl font-bold text-white mb-2">Enrolled Employees</h1>
-              <p className="text-gray-300">Manage your employee database</p>
+              <p className="text-gray-300">name od logged in user</p>
             </div>
             <button
               onClick={handleAddEmployee}
@@ -169,17 +419,19 @@ export default function HomePage() {
               </div>
             </div>
             
-            <div className="backdrop-blur-lg bg-white/10 rounded-2xl p-6 border border-white/20">
-              <div className="flex items-center">
-                <div className="p-3 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl">
-                  <User className="w-6 h-6 text-white" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-gray-300 text-sm">Active Today</p>
-                 <p className="text-2xl font-bold text-white">{activeToday}</p>
+            <Link href="/userlog" passHref>
+              <div className="cursor-pointer backdrop-blur-lg bg-white/10 rounded-2xl p-6 border border-white/20 transition hover:scale-[1.01] hover:border-white/40">
+                <div className="flex items-center">
+                  <div className="p-3 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl">
+                    <User className="w-6 h-6 text-white" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-gray-300 text-sm">Active Today</p>
+                    <p className="text-2xl font-bold text-white">{activeToday}</p>
+                  </div>
                 </div>
               </div>
-            </div>
+            </Link>
             
             <div className="backdrop-blur-lg bg-white/10 rounded-2xl p-6 border border-white/20">
               <div className="flex items-center">
@@ -187,7 +439,7 @@ export default function HomePage() {
                   <Smartphone className="w-6 h-6 text-white" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-gray-300 text-sm">Devices</p>
+                  <p className="text-gray-300 text-sm">Departments</p>
                   <p className="text-2xl font-bold text-white">{uniqueDevices}</p>
                 </div>
               </div>
@@ -204,8 +456,8 @@ export default function HomePage() {
                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Name</th>
                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Employee ID</th>
                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Gender</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Hourly Pay</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Finger ID</th>
+                    {/* <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Hourly Pay</th> */}
+                    {/* <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Finger ID</th> */}
                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Date</th>
                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Device</th>
                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Actions</th>
@@ -217,8 +469,8 @@ export default function HomePage() {
                       <td className="px-6 py-4 text-white font-medium">{employee.name}</td>
                       <td className="px-6 py-4 text-gray-300">{employee.employeeId}</td>
                       <td className="px-6 py-4 text-gray-300">{employee.gender}</td>
-                      <td className="px-6 py-4 text-green-400 font-semibold">{employee.hourlyPay}</td>
-                      <td className="px-6 py-4 text-purple-300">{employee.fingerId}</td>
+                      {/* <td className="px-6 py-4 text-green-400 font-semibold">{employee.hourlyPay}</td> */}
+                      {/* <td className="px-6 py-4 text-purple-300">{employee.fingerId}</td> */}
                       <td className="px-6 py-4 text-gray-300">{employee.date}</td>
                       <td className="px-6 py-4 text-cyan-300">{employee.device}</td>
                       <td className="px-6 py-4">
@@ -229,6 +481,15 @@ export default function HomePage() {
                           >
                             <Eye className="w-4 h-4" />
                           </button> */}
+                          {employee.fingerprintStatus !== 'Added' && (
+                            <button
+                              onClick={() => handleFingerprintAction(employee)}
+                              className="p-2 text-blue-400 hover:text-blue-300 hover:bg-white/10 rounded-lg transition-all duration-200"
+                              title="Fingerprint Added"
+                            >
+                              <Fingerprint className="w-4 h-4" />
+                            </button>
+                          )}
                           <button
                             onClick={() => handleEditEmployee(employee)}
                             className="p-2 text-yellow-400 hover:text-yellow-300 hover:bg-white/10 rounded-lg transition-all duration-200"
@@ -265,6 +526,15 @@ export default function HomePage() {
                       >
                         <Eye className="w-4 h-4" />
                       </button> */}
+                      {employee.fingerprintStatus !== 'Added' && (
+                        <button
+                          onClick={() => handleFingerprintAction(employee)}
+                          className="p-2 text-blue-400 hover:text-blue-300 hover:bg-white/10 rounded-lg transition-all duration-200"
+                          title="Fingerprint Added"
+                        >
+                          <Fingerprint className="w-4 h-4" />
+                        </button>
+                      )}
                       <button
                         onClick={() => handleEditEmployee(employee)}
                         className="p-2 text-yellow-400 hover:text-yellow-300 hover:bg-white/10 rounded-lg transition-all duration-200"
@@ -284,14 +554,14 @@ export default function HomePage() {
                       <p className="text-gray-400">Gender</p>
                       <p className="text-white">{employee.gender}</p>
                     </div>
-                    <div>
+                    {/* <div>
                       <p className="text-gray-400">Hourly Pay</p>
                       <p className="text-green-400 font-semibold">{employee.hourlyPay}</p>
-                    </div>
-                    <div>
+                    </div> */}
+                    {/* <div>
                       <p className="text-gray-400">Finger ID</p>
                       <p className="text-purple-300">{employee.fingerId}</p>
-                    </div>
+                    </div> */}
                     <div>
                       <p className="text-gray-400">Date</p>
                       <p className="text-white">{employee.date}</p>
@@ -307,6 +577,179 @@ export default function HomePage() {
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="backdrop-blur-lg bg-white/10 rounded-2xl border border-white/20 p-6 max-w-md w-full mx-4 shadow-2xl">
+            {/* Modal Header */}
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-white">Confirm Delete</h3>
+              <button
+                onClick={cancelDelete}
+                className="p-1 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200"
+                disabled={isDeleting}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="mb-6">
+              <div className="flex items-center mb-4">
+                <div className="p-3 bg-gradient-to-r from-red-500 to-pink-500 rounded-xl">
+                  <Trash2 className="w-6 h-6 text-white" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-gray-300 text-sm">You&apos;re about to delete</p>
+                  <p className="text-white font-semibold">{employeeToDelete?.name}</p>
+                  <p className="text-gray-400 text-sm">Employee ID: {employeeToDelete?.employeeId}</p>
+                </div>
+              </div>
+              <p className="text-gray-300 text-sm">
+                This action cannot be undone. This will permanently delete the employee record and all associated data.
+              </p>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex space-x-3">
+              <button
+                onClick={cancelDelete}
+                className="flex-1 bg-white/10 border border-white/20 text-white px-4 py-3 rounded-xl font-semibold hover:bg-white/20 transition-all duration-200"
+                disabled={isDeleting}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteEmployee}
+                disabled={isDeleting}
+                className="flex-1 bg-gradient-to-r from-red-500 to-pink-500 text-white px-4 py-3 rounded-xl font-semibold shadow-lg hover:shadow-red-500/25 transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+              >
+                {isDeleting ? (
+                  <div className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                    Deleting...
+                  </div>
+                ) : (
+                  'Delete Employee'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Fingerprint Registration Modal */}
+      {showFingerprintModal && selectedEmployee && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="backdrop-blur-lg bg-white/10 rounded-2xl border border-white/20 p-6 max-w-md w-full mx-4 shadow-2xl">
+            {/* Modal Header */}
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-white">Add Fingerprint</h3>
+              <button
+                onClick={closeFingerprintModal}
+                className="p-1 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200"
+                disabled={isFingerprintLoading || isPolling}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            {/* Modal Body */}
+            <div className="mb-6">
+              <div className="flex items-center mb-4">
+                <div className="p-3 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl">
+                  <Fingerprint className="w-6 h-6 text-white" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-gray-300 text-sm">Adding fingerprint for</p>
+                  <p className="text-white font-semibold">{selectedEmployee.name}</p>
+                  <p className="text-gray-400 text-sm">Employee ID: {selectedEmployee.employeeId}</p>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-gray-300 text-sm mb-2" htmlFor="device">
+                    Device
+                  </label>
+                  <input
+                    type="text"
+                    id="device"
+                    value={selectedEmployee.device || ''}
+                    readOnly
+                    className="w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-300 text-sm mb-2" htmlFor="fingerprintId">
+                    Fingerprint ID
+                  </label>
+                  {isFingerprintLoading ? (
+                    <input
+                      type="text"
+                      id="fingerprintId"
+                      value="Fetching available IDs..."
+                      readOnly
+                      className="w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  ) : availableFingerprintIds.length > 0 ? (
+                    <select
+                      id="fingerprintId"
+                      value={fingerprintId}
+                      onChange={(e) => setFingerprintId(e.target.value)}
+                      className="w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      {availableFingerprintIds.map(id => (
+                        <option key={id} value={id} className="bg-slate-800">
+                          {id}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      id="fingerprintId"
+                      value="No available IDs"
+                      readOnly
+                      className="w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  )}
+                  {availableFingerprintIds.length === 0 && !isFingerprintLoading && (
+                    <p className="text-red-400 text-xs mt-1">No available fingerprint IDs.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+            {/* Modal Footer */}
+            <div className="flex flex-col space-y-3">
+              {isPolling || isFingerprintLoading ? (
+                <div className="flex items-center justify-center space-x-2">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                  <span className="text-white text-sm">{pollingMessage || 'Processing...'}</span>
+                </div>
+              ) : fingerprintSuccess ? (
+                <div className="text-green-400 text-center font-semibold">Fingerprint scan completed and saved!</div>
+              ) : (
+                <>
+                  <button
+                    onClick={closeFingerprintModal}
+                    className="bg-white/10 border border-white/20 text-white px-4 py-3 rounded-xl font-semibold hover:bg-white/20 transition-all duration-200"
+                    disabled={isFingerprintLoading || isPolling}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleScanFinger}
+                    className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-4 py-3 rounded-xl font-semibold shadow-lg hover:shadow-blue-500/25 transform hover:scale-105 transition-all duration-300"
+                    disabled={!fingerprintId || isFingerprintLoading || isPolling}
+                  >
+                    Scan Finger
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
     </>
   );
