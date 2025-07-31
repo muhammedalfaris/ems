@@ -21,6 +21,11 @@ export default function HomePage() {
   const [showFingerprintModal, setShowFingerprintModal] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [fingerprintId, setFingerprintId] = useState('');
+  const [availableFingerprintIds, setAvailableFingerprintIds] = useState([]); // NEW
+  const [isFingerprintLoading, setIsFingerprintLoading] = useState(false); // NEW
+  const [isPolling, setIsPolling] = useState(false); // NEW
+  const [pollingMessage, setPollingMessage] = useState(''); // NEW
+  const [fingerprintSuccess, setFingerprintSuccess] = useState(false); // NEW
 
   useEffect(() => {
     fetchEmployees();
@@ -55,6 +60,7 @@ export default function HomePage() {
           fingerId: employee.fingerprint_id,
           date: employee.date,
           device: employee.device,
+          device_uid : employee.device_uid,
           fingerprintStatus: employee.fingerprint_status
         }));
         
@@ -158,26 +164,164 @@ export default function HomePage() {
     setEmployeeToDelete(null);
   };
 
-  const handleFingerprintAction = (employee) => {
+  const handleFingerprintAction = async (employee) => {
     setSelectedEmployee(employee);
     setShowFingerprintModal(true);
+    setIsFingerprintLoading(true);
+    setFingerprintId('');
+    setAvailableFingerprintIds([]);
+    setFingerprintSuccess(false);
+    setPollingMessage('');
+    try {
+      const token = sessionStorage.getItem('access_token');
+      // Get available fingerprint IDs
+      const idsRes = await fetch(`https://emsapi.disagglobal.com/api/manageusers/fingerprint-ids?device_uid=${employee.device_uid}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+        },
+      });
+      if (!idsRes.ok) throw new Error('Failed to fetch available fingerprint IDs');
+      const idsData = await idsRes.json();
+      if (idsData.available_fingerprint_ids && idsData.available_fingerprint_ids.length > 0) {
+        setAvailableFingerprintIds(idsData.available_fingerprint_ids);
+        setFingerprintId(idsData.available_fingerprint_ids[0].toString());
+      } else {
+        setAvailableFingerprintIds([]);
+        setFingerprintId('');
+      }
+    } catch (err) {
+      setAvailableFingerprintIds([]);
+      setFingerprintId('');
+      setPollingMessage('Failed to fetch fingerprint data.');
+      console.error(err);
+    } finally {
+      setIsFingerprintLoading(false);
+    }
   };
 
-  const handleScanFinger = () => {
-    console.log('Scanning finger for:', selectedEmployee);
-    console.log('Device:', selectedEmployee.device);
-    console.log('Fingerprint ID:', fingerprintId);
-    // Here you would typically call an API to register the fingerprint
-    // After successful registration, you can close the modal
+  const handleScanFinger = async () => {
+    if (!selectedEmployee || !fingerprintId) return;
+    setIsFingerprintLoading(true);
+    setPollingMessage('Assigning fingerprint...');
+    setFingerprintSuccess(false);
+    try {
+      const token = sessionStorage.getItem('access_token');
+      await fetch('https://emsapi.disagglobal.com/api/manageusers/assign-fingerprint', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          serialnumber: selectedEmployee.employeeId,
+          device_uid: selectedEmployee.device_uid,
+          fingerprint_id: parseInt(fingerprintId)
+        }),
+      });
+      // Start polling for scan status
+      setIsPolling(true);
+      setPollingMessage('Waiting for fingerprint scan...');
+      pollScanStatus(selectedEmployee.employeeId, fingerprintId);
+    } catch (err) {
+      setPollingMessage('Failed to assign fingerprint.');
+      setIsFingerprintLoading(false);
+      setIsPolling(false);
+      console.error(err);
+    }
+  };
+
+  const deselectFingerprint = async (device_uid) => {
+    try {
+      const token = sessionStorage.getItem('access_token');
+      await fetch('https://emsapi.disagglobal.com/api/manageusers/deselect-fingerprint', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ device_uid }),
+      });
+    } catch (err) {
+      // Optionally log or ignore
+      console.error('Failed to deselect fingerprint:', err);
+    }
+  };
+
+  const pollScanStatus = async (serialnumber, fingerprintId) => {
+    let attempts = 0;
+    const maxAttempts = 30; // ~1 min
+    const poll = async () => {
+      try {
+        const token = sessionStorage.getItem('access_token');
+        const res = await fetch(`https://emsapi.disagglobal.com/api/manageusers/check-scan-status?serialnumber=${serialnumber}&device_uid=${selectedEmployee.device_uid}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json',
+          },
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          if (data.status === 'completed') {
+            setPollingMessage('Fingerprint scan completed and saved!');
+            setFingerprintSuccess(true);
+            setIsPolling(false);
+            // Deselect the fingerprint after success
+            await deselectFingerprint(selectedEmployee.device_uid);
+            setTimeout(() => {
+              setShowFingerprintModal(false);
+              setSelectedEmployee(null);
+              setFingerprintId('');
+              setAvailableFingerprintIds([]);
+              setFingerprintSuccess(false);
+              setPollingMessage('');
+              // Refresh the employees list to update fingerprint status
+              fetchEmployees();
+            }, 1500);
+            return;
+          } else if (data.status === 'failed') {
+            setPollingMessage('Fingerprint scan failed. Please try again.');
+            setIsPolling(false);
+            setIsFingerprintLoading(false);
+            await deselectFingerprint(selectedEmployee.device_uid);
+            return;
+          }
+        }
+        attempts++;
+        if (attempts < maxAttempts) {
+          setTimeout(poll, 2000);
+        } else {
+          setPollingMessage('Scan timed out. Please try again.');
+          setIsPolling(false);
+          setIsFingerprintLoading(false);
+          await deselectFingerprint(selectedEmployee.device_uid);
+        }
+      } catch (err) {
+        setPollingMessage('Error during scan status check.');
+        setIsPolling(false);
+        setIsFingerprintLoading(false);
+        await deselectFingerprint(selectedEmployee.device_uid);
+        console.error(err);
+      }
+    };
+    poll();
+  };
+
+  const closeFingerprintModal = async () => {
+    if (selectedEmployee && (isPolling || isFingerprintLoading)) {
+      await deselectFingerprint(selectedEmployee.device_uid);
+    }
     setShowFingerprintModal(false);
     setSelectedEmployee(null);
     setFingerprintId('');
-  };
-
-  const closeFingerprintModal = () => {
-    setShowFingerprintModal(false);
-    setSelectedEmployee(null);
-    setFingerprintId('');
+    setAvailableFingerprintIds([]);
+    setFingerprintSuccess(false);
+    setPollingMessage('');
+    setIsFingerprintLoading(false);
+    setIsPolling(false);
   };
 
   // Calculate unique devices count
@@ -501,15 +645,15 @@ export default function HomePage() {
           <div className="backdrop-blur-lg bg-white/10 rounded-2xl border border-white/20 p-6 max-w-md w-full mx-4 shadow-2xl">
             {/* Modal Header */}
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold text-white">Register Fingerprint</h3>
+              <h3 className="text-xl font-bold text-white">Add Fingerprint</h3>
               <button
                 onClick={closeFingerprintModal}
                 className="p-1 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200"
+                disabled={isFingerprintLoading || isPolling}
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
-
             {/* Modal Body */}
             <div className="mb-6">
               <div className="flex items-center mb-4">
@@ -517,12 +661,11 @@ export default function HomePage() {
                   <Fingerprint className="w-6 h-6 text-white" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-gray-300 text-sm">Registering fingerprint for</p>
+                  <p className="text-gray-300 text-sm">Adding fingerprint for</p>
                   <p className="text-white font-semibold">{selectedEmployee.name}</p>
                   <p className="text-gray-400 text-sm">Employee ID: {selectedEmployee.employeeId}</p>
                 </div>
               </div>
-
               <div className="space-y-4">
                 <div>
                   <label className="block text-gray-300 text-sm mb-2" htmlFor="device">
@@ -536,37 +679,73 @@ export default function HomePage() {
                     className="w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
-
                 <div>
                   <label className="block text-gray-300 text-sm mb-2" htmlFor="fingerprintId">
                     Fingerprint ID
                   </label>
-                  <input
-                    type="text"
-                    id="fingerprintId"
-                    value={fingerprintId}
-                    onChange={(e) => setFingerprintId(e.target.value)}
-                    className="w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Enter fingerprint ID"
-                  />
+                  {isFingerprintLoading ? (
+                    <input
+                      type="text"
+                      id="fingerprintId"
+                      value="Fetching available IDs..."
+                      readOnly
+                      className="w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  ) : availableFingerprintIds.length > 0 ? (
+                    <select
+                      id="fingerprintId"
+                      value={fingerprintId}
+                      onChange={(e) => setFingerprintId(e.target.value)}
+                      className="w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      {availableFingerprintIds.map(id => (
+                        <option key={id} value={id} className="bg-slate-800">
+                          {id}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      id="fingerprintId"
+                      value="No available IDs"
+                      readOnly
+                      className="w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  )}
+                  {availableFingerprintIds.length === 0 && !isFingerprintLoading && (
+                    <p className="text-red-400 text-xs mt-1">No available fingerprint IDs.</p>
+                  )}
                 </div>
               </div>
             </div>
-
             {/* Modal Footer */}
-            <div className="flex space-x-3">
-              <button
-                onClick={closeFingerprintModal}
-                className="flex-1 bg-white/10 border border-white/20 text-white px-4 py-3 rounded-xl font-semibold hover:bg-white/20 transition-all duration-200"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleScanFinger}
-                className="flex-1 bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-4 py-3 rounded-xl font-semibold shadow-lg hover:shadow-blue-500/25 transform hover:scale-105 transition-all duration-300"
-              >
-                Scan Finger
-              </button>
+            <div className="flex flex-col space-y-3">
+              {isPolling || isFingerprintLoading ? (
+                <div className="flex items-center justify-center space-x-2">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                  <span className="text-white text-sm">{pollingMessage || 'Processing...'}</span>
+                </div>
+              ) : fingerprintSuccess ? (
+                <div className="text-green-400 text-center font-semibold">Fingerprint scan completed and saved!</div>
+              ) : (
+                <>
+                  <button
+                    onClick={closeFingerprintModal}
+                    className="bg-white/10 border border-white/20 text-white px-4 py-3 rounded-xl font-semibold hover:bg-white/20 transition-all duration-200"
+                    disabled={isFingerprintLoading || isPolling}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleScanFinger}
+                    className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-4 py-3 rounded-xl font-semibold shadow-lg hover:shadow-blue-500/25 transform hover:scale-105 transition-all duration-300"
+                    disabled={!fingerprintId || isFingerprintLoading || isPolling}
+                  >
+                    Scan Finger
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>

@@ -211,7 +211,7 @@ function ManageUsersContent() {
         username: formData.username,
         serialnumber: formData.employeeId,
         gender: formData.gender,
-        device_dep: deviceName
+        device_name: deviceName
       };
 
       let response;

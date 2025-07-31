@@ -167,26 +167,54 @@ export default function DevicePage() {
   };
 
   const handleModeChange = async (deviceId, newMode) => {
-    // Update local state immediately for better UX
+    const device = devices.find(d => d.id === deviceId);
+    if (!device) return;
+
+    const originalMode = device.mode;
+
     setDevices(devices.map(device => 
       device.id === deviceId ? { ...device, mode: newMode } : device
     ));
 
-    // Here you would typically make an API call to update the device mode
-    // Since the API endpoint for updating mode isn't provided, we'll just update locally
     try {
-      // TODO: Implement API call to update device mode
-      console.log(`Updating device ${deviceId} mode to ${newMode}`);
+      const token = sessionStorage.getItem('access_token');
+      const response = await fetch(`${API_BASE_URL}/update-mode`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          device_uid: device.uid,
+          device_mode: newMode === 'attendance' ? '1' : '0' 
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('Device mode updated:', data);
+      
+      setDevices(devices.map(d => 
+        d.id === deviceId ? { 
+          ...d, 
+          mode: data.device_mode === '1' ? 'attendance' : 'enrollment' 
+        } : d
+      ));
+
     } catch (error) {
       console.error('Error updating device mode:', error);
       // Revert the change if API call fails
-      setDevices(devices.map(device => 
-        device.id === deviceId ? { ...device, mode: device.mode } : device
+      setDevices(devices.map(d => 
+        d.id === deviceId ? { ...d, mode: originalMode } : d
       ));
+      setError('Failed to update device mode. Please try again.');
     }
   };
 
-  // Show loading state
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
