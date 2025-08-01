@@ -260,6 +260,7 @@ function ManageUsersContent() {
         
         setSuccessMessage('User added successfully!');
         setTimeout(() => setSuccessMessage(''), 3000);
+        router.push('/users');
       }
     } catch (error) {
       console.error('Error adding user:', error);

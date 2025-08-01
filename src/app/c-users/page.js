@@ -59,7 +59,8 @@ export default function HomePage() {
           hourlyPay: '₹25.00', // Default value since not provided in API
           fingerId: employee.fingerprint_id,
           date: employee.date,
-          device: employee.device,
+          device: employee.device_name,
+          deviceDept: employee.device_dep,
           device_uid : employee.device_uid,
           fingerprintStatus: employee.fingerprint_status
         }));
@@ -472,7 +473,7 @@ export default function HomePage() {
                       {/* <td className="px-6 py-4 text-green-400 font-semibold">{employee.hourlyPay}</td> */}
                       {/* <td className="px-6 py-4 text-purple-300">{employee.fingerId}</td> */}
                       <td className="px-6 py-4 text-gray-300">{employee.date}</td>
-                      <td className="px-6 py-4 text-cyan-300">{employee.device}</td>
+                      <td className="px-6 py-4 text-cyan-300">{employee.deviceDept}</td>
                       <td className="px-6 py-4">
                         <div className="flex space-x-2">
                           {/* <button
