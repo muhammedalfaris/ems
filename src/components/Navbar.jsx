@@ -15,21 +15,32 @@ export default function Navbar({ activeTab = 'users' }) {
   ];
 
   const handleNavClick = (tabId) => {
-    const routes = {
-    users: '/users',
-    manage: '/manage-users',
-    userlog: '/userlog',
-    devices: '/device',
-    profile: '/profile',
-  };
-  if (routes[tabId]) {
-    router.push(routes[tabId]);
-  }
-  setIsMobileMenuOpen(false);
+    const userType = sessionStorage.getItem('user_type');
+    
+    // Define routes based on user type
+    let routes = {
+      users: '/users',
+      manage: '/manage-users',
+      userlog: '/userlog',
+      devices: '/device',
+      profile: '/profile',
+    };
+    
+    // For Company Admin, redirect users tab to c-users
+    if (userType === 'Company Admin' && tabId === 'users') {
+      routes.users = '/c-users';
+    }
+    
+    if (routes[tabId]) {
+      router.push(routes[tabId]);
+    }
+    setIsMobileMenuOpen(false);
   };
 
   const handleLogout = () => {
     console.log('Logging out...');
+    // Clear all session storage
+    sessionStorage.clear();
     router.push('/login');
   };
 

@@ -26,11 +26,33 @@ export default function HomePage() {
   const [isPolling, setIsPolling] = useState(false); // NEW
   const [pollingMessage, setPollingMessage] = useState(''); // NEW
   const [fingerprintSuccess, setFingerprintSuccess] = useState(false); // NEW
+  const [companyName, setCompanyName] = useState(''); // NEW
 
   useEffect(() => {
+    // Check authentication
+    const token = sessionStorage.getItem('access_token');
+    const userType = sessionStorage.getItem('user_type');
+    
+    if (!token) {
+      router.push('/login');
+      return;
+    }
+    
+    // Check if user is Company Admin
+    if (userType !== 'Company Admin') {
+      router.push('/users');
+      return;
+    }
+    
+    // Get company name from sessionStorage
+    const storedCompanyName = sessionStorage.getItem('company_name');
+    if (storedCompanyName) {
+      setCompanyName(storedCompanyName);
+    }
+    
     fetchEmployees();
     fetchActiveCount();
-  }, []);
+  }, [router]);
 
   const fetchEmployees = async () => {
       try {
@@ -395,7 +417,7 @@ export default function HomePage() {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
             <div>
               <h1 className="text-3xl font-bold text-white mb-2">Enrolled Employees</h1>
-              <p className="text-gray-300">name od logged in user</p>
+              <p className="text-gray-300">{companyName || 'Company Name'}</p>
             </div>
             <button
               onClick={handleAddEmployee}
@@ -460,7 +482,7 @@ export default function HomePage() {
                     {/* <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Hourly Pay</th> */}
                     {/* <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Finger ID</th> */}
                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Date</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Device</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Department</th>
                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Actions</th>
                   </tr>
                 </thead>
@@ -568,8 +590,8 @@ export default function HomePage() {
                       <p className="text-white">{employee.date}</p>
                     </div>
                     <div className="col-span-2">
-                      <p className="text-gray-400">Device</p>
-                      <p className="text-cyan-300">{employee.device}</p>
+                      <p className="text-gray-400">Department</p>
+                      <p className="text-cyan-300">{employee.deviceDept}</p>
                     </div>
                   </div>
                 </div>

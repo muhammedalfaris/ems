@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Eye, EyeOff, Mail, Lock, Users, Shield, ArrowRight, Crown } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -14,6 +14,20 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
+
+  // Check if user is already logged in
+  useEffect(() => {
+    const token = sessionStorage.getItem('access_token');
+    const userType = sessionStorage.getItem('user_type');
+    
+    if (token) {
+      if (userType === 'Company Admin') {
+        router.push('/c-users');
+      } else {
+        router.push('/users');
+      }
+    }
+  }, [router]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -69,11 +83,18 @@ export default function LoginPage() {
       if (response.ok) {
         sessionStorage.setItem('access_token', data.access_token);
         sessionStorage.setItem('token_type', data.token_type);
-        sessionStorage.setItem('admin_info', JSON.stringify(data.admin));
+        
+        // Store user information including user type and company name
+        sessionStorage.setItem('user_info', JSON.stringify(data.user));
+        sessionStorage.setItem('user_type', data.user.user_types);
+        sessionStorage.setItem('company_name', data.user.name);
 
-        sessionStorage.setItem('selected_role', formData.role);
-
-        router.push('/users');
+        // Redirect based on user type
+        if (data.user.user_types === 'Company Admin') {
+          router.push('/c-users');
+        } else {
+          router.push('/users');
+        }
       } else {
         setErrors({
           api: data.message || 'Login failed. Please check your credentials.'

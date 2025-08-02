@@ -28,9 +28,24 @@ export default function HomePage() {
   const [fingerprintSuccess, setFingerprintSuccess] = useState(false); // NEW
 
   useEffect(() => {
+    // Check authentication
+    const token = sessionStorage.getItem('access_token');
+    const userType = sessionStorage.getItem('user_type');
+    
+    if (!token) {
+      router.push('/login');
+      return;
+    }
+    
+    // Check if user is Company Admin and redirect to c-users
+    if (userType === 'Company Admin') {
+      router.push('/c-users');
+      return;
+    }
+    
     fetchEmployees();
     fetchActiveCount();
-  }, []);
+  }, [router]);
 
   const fetchEmployees = async () => {
       try {
@@ -59,7 +74,7 @@ export default function HomePage() {
           hourlyPay: '₹25.00', // Default value since not provided in API
           fingerId: employee.fingerprint_id,
           date: employee.date,
-          device: employee.device,
+          device: employee.device_name,
           device_uid : employee.device_uid,
           fingerprintStatus: employee.fingerprint_status
         }));
@@ -252,7 +267,7 @@ export default function HomePage() {
 
   const pollScanStatus = async (serialnumber, fingerprintId) => {
     let attempts = 0;
-    const maxAttempts = 70; // ~1 min
+    const maxAttempts = 70; 
     const poll = async () => {
       try {
         const token = sessionStorage.getItem('access_token');

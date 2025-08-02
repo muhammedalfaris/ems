@@ -83,6 +83,13 @@ function ManageUsersContent() {
   };
 
   useEffect(() => {
+    // Check authentication
+    const token = sessionStorage.getItem('access_token');
+    if (!token) {
+      router.push('/login');
+      return;
+    }
+    
     fetchDevices();
     if (isEditMode) {
       // Get user data from sessionStorage

@@ -55,7 +55,7 @@ export default function UserLogPage() {
       
       // Transform API data to match our component structure
       const transformedLogs = result.data.map(log => ({
-        id: log.id,
+        id: log.serialnumber,
         name: log.username,
         serialNumber: log.serialnumber,
         deviceDept: log.device_dep,
