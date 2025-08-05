@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useContext, createContext } from 'react';
+import * as XLSX from 'xlsx';
 import { Calendar, Clock, Filter, Download, Search, FileText, Users, Activity, ChevronDown, ChevronUp } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 
@@ -53,7 +54,6 @@ export default function UserLogPage() {
 
       const result = await response.json();
       
-      // Transform API data to match our component structure
       const transformedLogs = result.data.map(log => ({
         id: log.serialnumber,
         name: log.username,
@@ -195,12 +195,11 @@ export default function UserLogPage() {
       alert('No data to export');
       return;
     }
-
-    // Prepare data for Excel export
+  
+    // Prepare data for Excel export - exclude the ID column
     const exportData = logs.map(log => ({
-      'ID': log.id,
       'Name': log.name,
-      'Serial Number': log.serialNumber,
+      'Employee ID': log.serialNumber,
       'Device Department': log.deviceDept,
       'Date': log.date,
       'Time In': log.timeIn,
@@ -208,28 +207,12 @@ export default function UserLogPage() {
       'Working Hours': calculateWorkingHours(log.timeIn, log.timeOut)
     }));
 
-    // Convert to CSV format
-    const headers = Object.keys(exportData[0]);
-    const csvContent = [
-      headers.join(','),
-      ...exportData.map(row => 
-        headers.map(header => {
-          const value = row[header] || '';
-          return `"${value.toString().replace(/"/g, '""')}"`;
-        }).join(',')
-      )
-    ].join('\n');
+    const ws = XLSX.utils.json_to_sheet(exportData);
 
-    // Create and download file
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `user-logs-${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "UserLogs");
+
+    XLSX.writeFile(wb, `user-logs-${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
   const calculateWorkingHours = (timeIn, timeOut) => {

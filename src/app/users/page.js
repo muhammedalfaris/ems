@@ -17,15 +17,14 @@ export default function HomePage() {
   const [employeeToDelete, setEmployeeToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const router = useRouter();
-  // New state for fingerprint modal
   const [showFingerprintModal, setShowFingerprintModal] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [fingerprintId, setFingerprintId] = useState('');
-  const [availableFingerprintIds, setAvailableFingerprintIds] = useState([]); // NEW
-  const [isFingerprintLoading, setIsFingerprintLoading] = useState(false); // NEW
-  const [isPolling, setIsPolling] = useState(false); // NEW
-  const [pollingMessage, setPollingMessage] = useState(''); // NEW
-  const [fingerprintSuccess, setFingerprintSuccess] = useState(false); // NEW
+  const [availableFingerprintIds, setAvailableFingerprintIds] = useState([]); 
+  const [isFingerprintLoading, setIsFingerprintLoading] = useState(false);
+  const [isPolling, setIsPolling] = useState(false); 
+  const [pollingMessage, setPollingMessage] = useState(''); 
+  const [fingerprintSuccess, setFingerprintSuccess] = useState(false); 
 
   useEffect(() => {
     // Check authentication
