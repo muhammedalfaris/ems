@@ -195,19 +195,74 @@ export default function UserLogPage() {
       alert('No data to export');
       return;
     }
-  
-    // Prepare data for Excel export - exclude the ID column
-    const exportData = logs.map(log => ({
-      'Name': log.name,
-      'Employee ID': log.serialNumber,
-      'Device Department': log.deviceDept,
-      'Date': log.date,
-      'Time In': log.timeIn,
-      'Time Out': log.timeOut,
-      'Working Hours': calculateWorkingHours(log.timeIn, log.timeOut)
-    }));
+
+    // Check if filtering for a single person within date range
+    const isSinglePersonDateFilter = filters.employeeName && 
+                                    filters.fromDate && 
+                                    filters.toDate && 
+                                    logs.length > 0;
+
+    let exportData;
+    
+    if (isSinglePersonDateFilter) {
+      // Calculate total days in date range
+      const fromDate = new Date(filters.fromDate);
+      const toDate = new Date(filters.toDate);
+      const timeDifference = toDate.getTime() - fromDate.getTime();
+      const totalDaysInRange = Math.ceil(timeDifference / (1000 * 3600 * 24)) + 1;
+      
+      // Get unique working days for this person
+      const uniqueDates = [...new Set(logs.map(log => log.date))];
+      const totalDaysWorked = uniqueDates.length;
+
+      // Prepare data with additional summary
+      exportData = logs.map(log => ({
+        'Name': log.name,
+        'Employee ID': log.serialNumber,
+        'Device Department': log.deviceDept,
+        'Date': log.date,
+        'Time In': log.timeIn,
+        'Time Out': log.timeOut,
+        'Working Hours': calculateWorkingHours(log.timeIn, log.timeOut)
+      }));
+
+      // Add summary row at the end
+      exportData.push({});  // Empty row for spacing
+      exportData.push({
+        'Name': 'SUMMARY',
+        'Employee ID': '',
+        'Device Department': '',
+        'Date': `${filters.fromDate} to ${filters.toDate}`,
+        'Time In': '',
+        'Time Out': '',
+        'Working Hours': `${totalDaysWorked} out of ${totalDaysInRange} days`
+      });
+    } else {
+      // Regular export without summary
+      exportData = logs.map(log => ({
+        'Name': log.name,
+        'Employee ID': log.serialNumber,
+        'Device Department': log.deviceDept,
+        'Date': log.date,
+        'Time In': log.timeIn,
+        'Time Out': log.timeOut,
+        'Working Hours': calculateWorkingHours(log.timeIn, log.timeOut)
+      }));
+    }
 
     const ws = XLSX.utils.json_to_sheet(exportData);
+
+    // Style the summary row if it exists (for single person filter)
+    if (isSinglePersonDateFilter) {
+      const summaryRowIndex = exportData.length - 1; // Last row (0-indexed)
+      const cellAddress = XLSX.utils.encode_cell({r: summaryRowIndex, c: 0}); // 'Name' column
+      if (ws[cellAddress]) {
+        ws[cellAddress].s = {
+          font: { bold: true },
+          fill: { fgColor: { rgb: "FFFF00" } } // Yellow background
+        };
+      }
+    }
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "UserLogs");
