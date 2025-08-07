@@ -22,18 +22,18 @@ function ManageUsersContent() {
   const [errors, setErrors] = useState({});
   const [successMessage, setSuccessMessage] = useState('');
   const [fingerprintLoading, setFingerprintLoading] = useState(false);
-  const [devicesLoading, setDevicesLoading] = useState(false);
+  const [departmentsLoading, setDepartmentsLoading] = useState(false);
  
   // Fetch devices from API
-  const fetchDevices = async () => {
-    setDevicesLoading(true);
+  const fetchDepartments = async () => {
+    setDepartmentsLoading(true);
     try {
       const token = sessionStorage.getItem('access_token');
       if (!token) {
         throw new Error('No access token found');
       }
 
-      const response = await fetch('https://emsapi.disagglobal.com/api/devices/list', {
+      const response = await fetch('https://emsapi.disagglobal.com/api/device-deps', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -50,16 +50,14 @@ function ManageUsersContent() {
       
       // Transform the response data to match the expected format
       // The response appears to be a single device object, but we'll handle it as an array
-      const deviceList = Array.isArray(data) ? data : [data];
-      
-      const transformedDevices = deviceList.map((device, index) => ({
+      const departmentList = data.data || [];
+      const transformedDepartments = departmentList.map((dept, index) => ({
         id: index + 1,
-        name: device['Device Name'],
-        department: device['Device Department'],
-        displayName: `${device['Device Name']} (${device['Device Department']})`
+        name: dept,
+        displayName: dept
       }));
 
-      setDepartments(transformedDevices);
+      setDepartments(transformedDepartments);
     } catch (error) {
       console.error('Error fetching devices:', error);
       setErrors(prev => ({
@@ -78,7 +76,7 @@ function ManageUsersContent() {
       ];
       setDepartments(mockDepartments);
     } finally {
-      setDevicesLoading(false);
+      setDepartmentsLoading(false);
     }
   };
 
@@ -90,14 +88,14 @@ function ManageUsersContent() {
       return;
     }
     
-    fetchDevices();
+    fetchDepartments();
     if (isEditMode) {
       // Get user data from sessionStorage
       const stored = sessionStorage.getItem('editUserData');
       if (stored) {
         const data = JSON.parse(stored);
         setFormData({
-          department: String(data.device || ''),
+          department: String(data.device_dep || ''),
           fingerprintId: '', // Not used
           username: String(data.name || ''),
           employeeId: String(data.employeeId || ''),
@@ -218,7 +216,7 @@ function ManageUsersContent() {
         username: formData.username,
         serialnumber: formData.employeeId,
         gender: formData.gender,
-        device_name: deviceName
+        device_dep: formData.department
       };
 
       let response;
@@ -338,25 +336,25 @@ function ManageUsersContent() {
                   <div className="p-2 bg-gradient-to-r from-purple-500 to-cyan-500 rounded-xl mr-3">
                     <Building className="w-5 h-5 text-white" />
                   </div>
-                  <h2 className="text-lg md:text-xl font-semibold text-white">Device</h2>
+                  <h2 className="text-lg md:text-xl font-semibold text-white">Department</h2>
                 </div>
                 
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-300">
-                    Select Device
+                    Select Department
                   </label>
                   <select
                     name="department"
                     value={formData.department}
                     onChange={handleInputChange}
-                    disabled={devicesLoading}
+                    disabled={departmentsLoading}
                     className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm md:text-base disabled:opacity-50"
                   >
                     <option value="">
-                      {devicesLoading ? 'Loading devices...' : 'Choose a device...'}
+                      {departmentsLoading ? 'Loading departments...' : 'Choose a department...'}
                     </option>
                     {departments.map(dept => (
-                      <option key={dept.id} value={dept.displayName} className="bg-slate-800">
+                      <option key={dept.id} value={dept.name} className="bg-slate-800">
                         {dept.displayName}
                       </option>
                     ))}
