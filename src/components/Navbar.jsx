@@ -6,7 +6,7 @@ export default function Navbar({ activeTab = 'users' }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const router = useRouter();
 
-    const userType = sessionStorage.getItem('user_type');
+    const userType = typeof window !== 'undefined' ? sessionStorage.getItem('user_type') : null;
     console.log('User Type:', userType);
 
     const navItems = [
