@@ -6,9 +6,10 @@ export default function Navbar({ activeTab = 'users' }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const router = useRouter();
 
-  const userType = sessionStorage.getItem('user_type');
+    const userType = sessionStorage.getItem('user_type');
+    console.log('User Type:', userType);
 
-  const navItems = [
+    const navItems = [
     { id: 'users', label: 'Users', icon: Users },
     { id: 'manage', label: 'Manage Users', icon: UserCog },
     { id: 'userlog', label: 'User Log', icon: FileText },
