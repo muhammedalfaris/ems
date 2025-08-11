@@ -58,7 +58,7 @@ export default function UserLogPage() {
         id: log.serialnumber,
         name: log.username,
         serialNumber: log.serialnumber,
-        deviceDept: log.device_dep,
+        deviceDept: log.department_name,
         date: log.checkindate,
         timeIn: log.timein,
         timeOut: log.timeout,
@@ -83,7 +83,8 @@ export default function UserLogPage() {
     try {
       const token = sessionStorage.getItem('access_token');
       
-      const response = await fetch('https://emsapi.disagglobal.com/api/devices/list', {
+      // Fetch devices
+      const devicesResponse = await fetch('https://emsapi.disagglobal.com/api/devices/list', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -92,20 +93,41 @@ export default function UserLogPage() {
         }
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (!devicesResponse.ok) {
+        throw new Error(`HTTP error! status: ${devicesResponse.status}`);
       }
 
-      const deviceData = await response.json();
-      setDevices(deviceData);
+      const devicesData = await devicesResponse.json();
       
-      // Extract unique departments from devices
-      const uniqueDepartments = [...new Set(deviceData.map(device => device["Device Department"]))];
-      setDepartments(uniqueDepartments);
+      if (!devicesData.devices || !Array.isArray(devicesData.devices)) {
+        throw new Error('Invalid devices data format');
+      }
+
+      setDevices(devicesData.devices);
+      
+      // Fetch departments from the new API
+      const departmentsResponse = await fetch('https://emsapi.disagglobal.com/api/departments', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!departmentsResponse.ok) {
+        throw new Error(`HTTP error! status: ${departmentsResponse.status}`);
+      }
+
+      const departmentsData = await departmentsResponse.json();
+      
+      // Extract department names from the response
+      const departmentNames = departmentsData.data.map(dept => dept.department_name);
+      setDepartments(departmentNames);
       
     } catch (err) {
-      console.error('Error fetching devices:', err);
-      setError(`Failed to fetch devices: ${err.message}`);
+      console.error('Error fetching data:', err);
+      setError(`Failed to fetch data: ${err.message}`);
     } finally {
       setDevicesLoading(false);
     }
@@ -123,7 +145,6 @@ export default function UserLogPage() {
     setError('');
 
     try {
-      // Build query parameters
       const params = new URLSearchParams();
       const token = sessionStorage.getItem('access_token');
       
@@ -131,7 +152,7 @@ export default function UserLogPage() {
       if (filters.toDate) params.append('date_to', filters.toDate);
       if (filters.fromTime) params.append('time_from', filters.fromTime);
       if (filters.toTime) params.append('time_to', filters.toTime);
-      if (filters.department) params.append('device_dep', filters.department);
+      if (filters.department) params.append('department_name', filters.department); // Changed from device_dep to department_name
       if (filters.employeeName) params.append('username', filters.employeeName);
 
       const apiUrl = `https://emsapi.disagglobal.com/api/logs?${params.toString()}`;
@@ -156,7 +177,7 @@ export default function UserLogPage() {
         id: log.id,
         name: log.username,
         serialNumber: log.serialnumber,
-        deviceDept: log.device_dep,
+        deviceDept: log.department_name || log.device_dep, // Handle both possible field names
         date: log.checkindate,
         timeIn: log.timein,
         timeOut: log.timeout,

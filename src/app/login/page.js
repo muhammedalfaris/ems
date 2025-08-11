@@ -83,15 +83,17 @@ export default function LoginPage() {
       if (response.ok) {
         sessionStorage.setItem('access_token', data.access_token);
         sessionStorage.setItem('token_type', data.token_type);
-        
-        // Store user information including user type and company name
+
         sessionStorage.setItem('user_info', JSON.stringify(data.user));
         sessionStorage.setItem('user_type', data.user.user_types);
         sessionStorage.setItem('company_name', data.user.name);
+      
 
         // Redirect based on user type
         if (data.user.user_types === 'Company Admin') {
           router.push('/c-users');
+        } else if (data.user.user_types === 'Department Admin') {
+          router.push('/d-users');
         } else {
           router.push('/users');
         }

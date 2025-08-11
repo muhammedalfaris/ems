@@ -17,19 +17,17 @@ export default function HomePage() {
   const [employeeToDelete, setEmployeeToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const router = useRouter();
-  // New state for fingerprint modal
   const [showFingerprintModal, setShowFingerprintModal] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [fingerprintId, setFingerprintId] = useState('');
-  const [availableFingerprintIds, setAvailableFingerprintIds] = useState([]); // NEW
-  const [isFingerprintLoading, setIsFingerprintLoading] = useState(false); // NEW
-  const [isPolling, setIsPolling] = useState(false); // NEW
-  const [pollingMessage, setPollingMessage] = useState(''); // NEW
-  const [fingerprintSuccess, setFingerprintSuccess] = useState(false); // NEW
-  const [companyName, setCompanyName] = useState(''); // NEW
+  const [availableFingerprintIds, setAvailableFingerprintIds] = useState([]); 
+  const [isFingerprintLoading, setIsFingerprintLoading] = useState(false);
+  const [isPolling, setIsPolling] = useState(false); 
+  const [pollingMessage, setPollingMessage] = useState(''); 
+  const [fingerprintSuccess, setFingerprintSuccess] = useState(false); 
+  const [companyName, setCompanyName] = useState(''); 
 
   useEffect(() => {
-    // Check authentication
     const token = sessionStorage.getItem('access_token');
     const userType = sessionStorage.getItem('user_type');
     
@@ -38,8 +36,7 @@ export default function HomePage() {
       return;
     }
     
-    // Check if user is Company Admin
-    if (userType !== 'Company Admin') {
+    if (userType !== 'Department Admin') {
       router.push('/users');
       return;
     }
@@ -78,11 +75,11 @@ export default function HomePage() {
           name: employee.name,
           employeeId: employee.serialnumber,
           gender: employee.gender,
-          hourlyPay: '₹25.00', // Default value since not provided in API
+          hourlyPay: '₹25.00', 
           fingerId: employee.fingerprint_id,
           date: employee.date,
           device: employee.device_name,
-          deviceDept: employee.device_dep,
+          deviceDept: employee.department_name,
           device_uid : employee.device_uid,
           fingerprintStatus: employee.fingerprint_status
         }));
@@ -429,7 +426,7 @@ export default function HomePage() {
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             <div className="backdrop-blur-lg bg-white/10 rounded-2xl p-6 border border-white/20">
               <div className="flex items-center">
                 <div className="p-3 bg-gradient-to-r from-purple-500 to-cyan-500 rounded-xl">

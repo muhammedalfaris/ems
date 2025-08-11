@@ -19,7 +19,6 @@ export default function DevicePage() {
   const [deleting, setDeleting] = useState(null);
   const [error, setError] = useState('');
 
-  // Fetch devices from API
   const fetchDevices = async () => {
     try {
       setLoading(true);
@@ -39,14 +38,19 @@ export default function DevicePage() {
       
       const data = await response.json();
       
+      // Check if data has the expected structure
+      if (!data.devices || !Array.isArray(data.devices)) {
+        throw new Error('Invalid devices data format');
+      }
+      
       // Transform API response to match component structure
-      const transformedDevices = data.map((device, index) => ({
-        id: device.id || index + 1, // Use API id if available, otherwise use index
-        name: device['Device Name'] || device.device_name || 'Unknown Device',
-        department: device['Device Department'] || device.device_dep || 'Unknown Department',
-        uid: device['Device UID'] || device.device_uid || 'N/A',
-        date: device['Device Date'] || device.device_date || new Date().toISOString().split('T')[0],
-        mode: device['Device Mode'] === 1 || device.device_mode === 1 ? 'attendance' : 'enrollment'
+      const transformedDevices = data.devices.map((device, index) => ({
+        id: device['Device UID'] || index + 1, // Use UID as ID if available
+        name: device['Device Name'] || 'Unknown Device',
+        department: device['Device Department'] || 'Unknown Department',
+        uid: device['Device UID'] || 'N/A',
+        date: device['Device Date'] || new Date().toISOString().split('T')[0],
+        mode: device['Device Mode'] === 1 ? 'attendance' : 'enrollment'
       }));
       
       setDevices(transformedDevices);
@@ -74,13 +78,18 @@ export default function DevicePage() {
         body: JSON.stringify({
           device_name: deviceData.name,
           device_dep: deviceData.department,
-          device_mode: deviceData.mode
+          device_mode: deviceData.mode === 'attendance' ? 1 : 0
         })
       });
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
+
+      const responseData = await response.json();
+      console.log('Device added:', responseData);
+      
+      // Refresh the devices list
       await fetchDevices();
       return true;
     } catch (error) {
@@ -114,6 +123,9 @@ export default function DevicePage() {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
+      const responseData = await response.json();
+      console.log('Device deleted:', responseData);
+      
       // Remove device from local state
       setDevices(devices.filter(device => device.name !== deviceName));
     } catch (error) {

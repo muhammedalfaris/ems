@@ -17,16 +17,29 @@ export default function HomePage() {
   const [employeeToDelete, setEmployeeToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const router = useRouter();
-  // New state for fingerprint modal
   const [showFingerprintModal, setShowFingerprintModal] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [fingerprintId, setFingerprintId] = useState('');
-  const [availableFingerprintIds, setAvailableFingerprintIds] = useState([]); // NEW
-  const [isFingerprintLoading, setIsFingerprintLoading] = useState(false); // NEW
-  const [isPolling, setIsPolling] = useState(false); // NEW
-  const [pollingMessage, setPollingMessage] = useState(''); // NEW
-  const [fingerprintSuccess, setFingerprintSuccess] = useState(false); // NEW
-  const [companyName, setCompanyName] = useState(''); // NEW
+  const [availableFingerprintIds, setAvailableFingerprintIds] = useState([]);
+  const [isFingerprintLoading, setIsFingerprintLoading] = useState(false); 
+  const [isPolling, setIsPolling] = useState(false); 
+  const [pollingMessage, setPollingMessage] = useState('');
+  const [fingerprintSuccess, setFingerprintSuccess] = useState(false);
+  const [companyName, setCompanyName] = useState(''); 
+  const [showDepartmentsModal, setShowDepartmentsModal] = useState(false);
+  const [departments, setDepartments] = useState([]);
+  const [departmentsLoading, setDepartmentsLoading] = useState(false);
+  const [showAddDepartmentModal, setShowAddDepartmentModal] = useState(false);
+  const [branches, setBranches] = useState([]);
+  const [branchesLoading, setBranchesLoading] = useState(false);
+  const [newDepartment, setNewDepartment] = useState({
+    department_name: '',
+    branch_id: '',
+    name: '',
+    email: '',
+    password: ''
+  });
+  const [departmentErrors, setDepartmentErrors] = useState({});
 
   useEffect(() => {
     // Check authentication
@@ -38,13 +51,11 @@ export default function HomePage() {
       return;
     }
     
-    // Check if user is Company Admin
     if (userType !== 'Company Admin') {
       router.push('/users');
       return;
     }
     
-    // Get company name from sessionStorage
     const storedCompanyName = sessionStorage.getItem('company_name');
     if (storedCompanyName) {
       setCompanyName(storedCompanyName);
@@ -52,6 +63,7 @@ export default function HomePage() {
     
     fetchEmployees();
     fetchActiveCount();
+    fetchDepartments(); 
   }, [router]);
 
   const fetchEmployees = async () => {
@@ -127,6 +139,115 @@ export default function HomePage() {
       setLoading(false);
     }
   }
+
+  const fetchBranches = async () => {
+    try {
+      setBranchesLoading(true);
+      const token = sessionStorage.getItem('access_token');
+      const response = await fetch('https://emsapi.disagglobal.com/api/branch', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      setBranches(result || []);
+    } catch (err) {
+      console.error('Error fetching branches:', err);
+      setBranches([]);
+    } finally {
+      setBranchesLoading(false);
+    }
+  };
+
+  const handleAddDepartment = async () => {
+    const errors = {};
+    if (!newDepartment.department_name) errors.department_name = 'Department name is required';
+    if (!newDepartment.branch_id) errors.branch_id = 'Branch is required';
+    // if (!newDepartment.name) errors.name = 'Name is required';
+    if (!newDepartment.email) errors.email = 'Email is required';
+    if (!newDepartment.password || newDepartment.password.length < 6) {
+      errors.password = 'Password must be at least 6 characters';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setDepartmentErrors(errors);
+      return;
+    }
+
+    try {
+      setDepartmentsLoading(true);
+      const token = sessionStorage.getItem('access_token');
+      const userInfo = JSON.parse(sessionStorage.getItem('user_info'));
+      const company_id = userInfo?.company_id;
+
+      const payload = {
+        ...newDepartment,
+        company_id: company_id.toString()
+      };
+
+      const response = await fetch('https://emsapi.disagglobal.com/api/departments', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // Refresh departments list
+      await fetchDepartments();
+      setShowAddDepartmentModal(false);
+      setNewDepartment({
+        department_name: '',
+        branch_id: '',
+        // name: '',
+        email: '',
+        password: ''
+      });
+      setDepartmentErrors({});
+    } catch (err) {
+      console.error('Error adding department:', err);
+      setDepartmentErrors({ submit: err.message || 'Failed to add department' });
+    } finally {
+      setDepartmentsLoading(false);
+    }
+  };
+
+  const fetchDepartments = async () => {
+    try {
+      setDepartmentsLoading(true);
+      const token = sessionStorage.getItem('access_token');
+      const response = await fetch('https://emsapi.disagglobal.com/api/departments', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      setDepartments(result.data || []);
+    } catch (err) {
+      console.error('Error fetching departments:', err);
+      setDepartments([]);
+    } finally {
+      setDepartmentsLoading(false);
+    }
+  };
 
   const handleAddEmployee = () => {
     router.push('/manage-users')
@@ -347,10 +468,6 @@ export default function HomePage() {
     setIsPolling(false);
   };
 
-  // Calculate unique devices count
-  const uniqueDevices = [...new Set(employees.map(emp => emp.device))].length;
-
-  // Show loading state
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
@@ -362,7 +479,6 @@ export default function HomePage() {
     );
   }
 
-  // Show error state
   if (error) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
@@ -456,14 +572,20 @@ export default function HomePage() {
               </div>
             </Link>
             
-            <div className="backdrop-blur-lg bg-white/10 rounded-2xl p-6 border border-white/20">
+            <div 
+              className="cursor-pointer backdrop-blur-lg bg-white/10 rounded-2xl p-6 border border-white/20 transition hover:scale-[1.01] hover:border-white/40"
+              onClick={() => {
+                setShowDepartmentsModal(true);
+                fetchDepartments(); 
+              }}
+            >
               <div className="flex items-center">
                 <div className="p-3 bg-gradient-to-r from-orange-500 to-red-500 rounded-xl">
                   <Smartphone className="w-6 h-6 text-white" />
                 </div>
                 <div className="ml-4">
                   <p className="text-gray-300 text-sm">Departments</p>
-                  <p className="text-2xl font-bold text-white">{uniqueDevices}</p>
+                  <p className="text-2xl font-bold text-white">{departments.length}</p>
                 </div>
               </div>
             </div>
@@ -769,6 +891,207 @@ export default function HomePage() {
                   </button>
                 </>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Departments Modal */}
+      {showDepartmentsModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="backdrop-blur-lg bg-white/10 rounded-2xl border border-white/20 p-6 max-w-md w-full mx-4 shadow-2xl">
+            {/* Modal Header */}
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-white">Departments</h3>
+              <button
+                onClick={() => setShowDepartmentsModal(false)}
+                className="p-1 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="mb-6 max-h-96 overflow-y-auto">
+              {departmentsLoading ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+                </div>
+              ) : departments.length === 0 ? (
+                <p className="text-gray-400 text-center py-4">No departments found</p>
+              ) : (
+                <ul className="space-y-2">
+                  {departments.map(dept => (
+                    <li key={dept.id} className="p-3 bg-white/5 rounded-lg border border-white/10">
+                      <p className="text-white font-medium">{dept.department_name}</p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex justify-end">
+              <button
+                onClick={() => {
+                  setShowAddDepartmentModal(true);
+                  fetchBranches();
+                }}
+                className="bg-gradient-to-r from-purple-500 to-cyan-500 text-white px-4 py-3 rounded-xl font-semibold shadow-lg hover:shadow-purple-500/25 transform hover:scale-105 transition-all duration-300"
+              >
+                <Plus className="w-4 h-4 mr-2 inline" />
+                Add Department
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Add Department Modal */}
+      {showAddDepartmentModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="backdrop-blur-lg bg-white/10 rounded-2xl border border-white/20 p-6 max-w-md w-full mx-4 shadow-2xl">
+            {/* Modal Header */}
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-white">Add New Department</h3>
+              <button
+                onClick={() => {
+                  setShowAddDepartmentModal(false);
+                  setNewDepartment({
+                    department_name: '',
+                    branch_id: '',
+                    // name: '',
+                    email: '',
+                    password: ''
+                  });
+                  setDepartmentErrors({});
+                }}
+                className="p-1 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200"
+                disabled={departmentsLoading}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="mb-6 space-y-4">
+              <div>
+                <label className="block text-gray-300 text-sm mb-2">Department Name</label>
+                <input
+                  type="text"
+                  value={newDepartment.department_name}
+                  onChange={(e) => setNewDepartment({...newDepartment, department_name: e.target.value})}
+                  className="w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="Enter department name"
+                />
+                {departmentErrors.department_name && (
+                  <p className="text-red-400 text-xs mt-1">{departmentErrors.department_name}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-gray-300 text-sm mb-2">Branch</label>
+                {branchesLoading ? (
+                  <div className="w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-gray-400">
+                    Loading branches...
+                  </div>
+                ) : (
+                  <select
+                    value={newDepartment.branch_id}
+                    onChange={(e) => setNewDepartment({...newDepartment, branch_id: e.target.value})}
+                    className="w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  >
+                    <option value="">Select a branch</option>
+                    {branches.map(branch => (
+                      <option key={branch.id} value={branch.id} className="bg-slate-800">
+                        {branch.branch_name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                {departmentErrors.branch_id && (
+                  <p className="text-red-400 text-xs mt-1">{departmentErrors.branch_id}</p>
+                )}
+              </div>
+
+              {/* <div>
+                <label className="block text-gray-300 text-sm mb-2">Admin Name</label>
+                <input
+                  type="text"
+                  value={newDepartment.name}
+                  onChange={(e) => setNewDepartment({...newDepartment, name: e.target.value})}
+                  className="w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="Enter admin name"
+                />
+                {departmentErrors.name && (
+                  <p className="text-red-400 text-xs mt-1">{departmentErrors.name}</p>
+                )}
+              </div> */}
+
+              <div>
+                <label className="block text-gray-300 text-sm mb-2">Admin Email</label>
+                <input
+                  type="email"
+                  value={newDepartment.email}
+                  onChange={(e) => setNewDepartment({...newDepartment, email: e.target.value})}
+                  className="w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="Enter admin email"
+                />
+                {departmentErrors.email && (
+                  <p className="text-red-400 text-xs mt-1">{departmentErrors.email}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-gray-300 text-sm mb-2">Admin Password</label>
+                <input
+                  type="password"
+                  value={newDepartment.password}
+                  onChange={(e) => setNewDepartment({...newDepartment, password: e.target.value})}
+                  className="w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="Enter password (min 6 characters)"
+                />
+                {departmentErrors.password && (
+                  <p className="text-red-400 text-xs mt-1">{departmentErrors.password}</p>
+                )}
+              </div>
+
+              {departmentErrors.submit && (
+                <div className="text-red-400 text-sm mt-2">{departmentErrors.submit}</div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setShowAddDepartmentModal(false);
+                  setNewDepartment({
+                    department_name: '',
+                    branch_id: '',
+                    // name: '',
+                    email: '',
+                    password: ''
+                  });
+                  setDepartmentErrors({});
+                }}
+                className="bg-white/10 border border-white/20 text-white px-4 py-3 rounded-xl font-semibold hover:bg-white/20 transition-all duration-200"
+                disabled={departmentsLoading}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddDepartment}
+                disabled={departmentsLoading}
+                className="bg-gradient-to-r from-purple-500 to-cyan-500 text-white px-4 py-3 rounded-xl font-semibold shadow-lg hover:shadow-purple-500/25 transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {departmentsLoading ? (
+                  <div className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                    Adding...
+                  </div>
+                ) : (
+                  'Add Department'
+                )}
+              </button>
             </div>
           </div>
         </div>

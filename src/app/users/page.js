@@ -35,10 +35,12 @@ export default function HomePage() {
       router.push('/login');
       return;
     }
-    
-    // Check if user is Company Admin and redirect to c-users
+
     if (userType === 'Company Admin') {
       router.push('/c-users');
+      return;
+    } else if (userType === 'Department Admin') {
+      router.push('/d-users');
       return;
     }
     
