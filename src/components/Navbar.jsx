@@ -6,18 +6,17 @@ export default function Navbar({ activeTab = 'users' }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const router = useRouter();
 
+  const userType = sessionStorage.getItem('user_type');
+
   const navItems = [
     { id: 'users', label: 'Users', icon: Users },
     { id: 'manage', label: 'Manage Users', icon: UserCog },
     { id: 'userlog', label: 'User Log', icon: FileText },
     { id: 'devices', label: 'Devices', icon: Smartphone },
     { id: 'profile', label: 'Profile', icon: User }
-  ];
+  ].filter(item => !(userType === 'Department Admin' && item.id === 'devices'));
 
   const handleNavClick = (tabId) => {
-    const userType = sessionStorage.getItem('user_type');
-    
-    // Define routes based on user type
     let routes = {
       users: '/users',
       manage: '/manage-users',
