@@ -33,7 +33,7 @@ function ManageUsersContent() {
         throw new Error('No access token found');
       }
 
-      const response = await fetch('https://emsapi.disagglobal.com/api/device-deps', {
+      const response = await fetch('https://emsapi.disagglobal.com/api/departments', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -52,9 +52,9 @@ function ManageUsersContent() {
       // The response appears to be a single device object, but we'll handle it as an array
       const departmentList = data.data || [];
       const transformedDepartments = departmentList.map((dept, index) => ({
-        id: index + 1,
-        name: dept,
-        displayName: dept
+        id: dept.id,
+        name: dept.department_name,
+        displayName: dept.department_name
       }));
 
       setDepartments(transformedDepartments);
@@ -62,7 +62,7 @@ function ManageUsersContent() {
       console.error('Error fetching devices:', error);
       setErrors(prev => ({
         ...prev,
-        devices: 'Failed to load devices. Please try again.'
+        departments: 'Failed to load departments. Please try again.'
       }));
       
       // Fallback to mock data if API fails
@@ -216,7 +216,7 @@ function ManageUsersContent() {
         username: formData.username,
         serialnumber: formData.employeeId,
         gender: formData.gender,
-        device_dep: formData.department
+        department_name: formData.department
       };
 
       let response;

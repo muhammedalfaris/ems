@@ -82,7 +82,7 @@ export default function HomePage() {
           fingerId: employee.fingerprint_id,
           date: employee.date,
           device: employee.device_name,
-          deviceDept: employee.department_name,
+          deviceDept: employee.device_dep,
           device_uid : employee.device_uid,
           fingerprintStatus: employee.fingerprint_status
         }));
@@ -456,7 +456,7 @@ export default function HomePage() {
               </div>
             </Link>
             
-            <div className="backdrop-blur-lg bg-white/10 rounded-2xl p-6 border border-white/20">
+            {/* <div className="backdrop-blur-lg bg-white/10 rounded-2xl p-6 border border-white/20">
               <div className="flex items-center">
                 <div className="p-3 bg-gradient-to-r from-orange-500 to-red-500 rounded-xl">
                   <Smartphone className="w-6 h-6 text-white" />
@@ -466,7 +466,7 @@ export default function HomePage() {
                   <p className="text-2xl font-bold text-white">{uniqueDevices}</p>
                 </div>
               </div>
-            </div>
+            </div> */}
           </div>
 
           {/* Employees Table */}
