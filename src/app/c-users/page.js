@@ -35,11 +35,14 @@ export default function HomePage() {
   const [newDepartment, setNewDepartment] = useState({
     department_name: '',
     branch_id: '',
+    device_name: '',
     name: '',
     email: '',
     password: ''
   });
   const [departmentErrors, setDepartmentErrors] = useState({});
+  const [devices, setDevices] = useState([]);
+  const [devicesLoading, setDevicesLoading] = useState(false);
 
   useEffect(() => {
     // Check authentication
@@ -169,6 +172,7 @@ export default function HomePage() {
     const errors = {};
     if (!newDepartment.department_name) errors.department_name = 'Department name is required';
     if (!newDepartment.branch_id) errors.branch_id = 'Branch is required';
+    if (!newDepartment.device_name) errors.device_name = 'Device is required';
     // if (!newDepartment.name) errors.name = 'Name is required';
     if (!newDepartment.email) errors.email = 'Email is required';
     if (!newDepartment.password || newDepartment.password.length < 6) {
@@ -466,6 +470,31 @@ export default function HomePage() {
     setPollingMessage('');
     setIsFingerprintLoading(false);
     setIsPolling(false);
+  };
+
+  const fetchDevices = async () => {
+    try {
+      setDevicesLoading(true);
+      const token = sessionStorage.getItem('access_token');
+      const response = await fetch('https://emsapi.disagglobal.com/api/devices/list', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      setDevices(result.devices || []); 
+    } catch (err) {
+      console.error('Error fetching devices:', err);
+      setDevices([]);
+    } finally {
+      setDevicesLoading(false);
+    }
   };
 
   if (loading) {
@@ -935,6 +964,7 @@ export default function HomePage() {
                 onClick={() => {
                   setShowAddDepartmentModal(true);
                   fetchBranches();
+                  fetchDevices();
                 }}
                 className="bg-gradient-to-r from-purple-500 to-cyan-500 text-white px-4 py-3 rounded-xl font-semibold shadow-lg hover:shadow-purple-500/25 transform hover:scale-105 transition-all duration-300"
               >
@@ -958,6 +988,7 @@ export default function HomePage() {
                   setNewDepartment({
                     department_name: '',
                     branch_id: '',
+                    device_name: '',
                     // name: '',
                     email: '',
                     password: ''
@@ -1009,6 +1040,31 @@ export default function HomePage() {
                 )}
                 {departmentErrors.branch_id && (
                   <p className="text-red-400 text-xs mt-1">{departmentErrors.branch_id}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-gray-300 text-sm mb-2">Device</label>
+                {devicesLoading ? (
+                  <div className="w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-gray-400">
+                    Loading devices...
+                  </div>
+                ) : (
+                  <select
+                    value={newDepartment.device_name}
+                    onChange={(e) => setNewDepartment({...newDepartment, device_name: e.target.value})}
+                    className="w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  >
+                    <option value="">Select a device</option>
+                    {devices.map(device => (
+                      <option key={device['Device UID']} value={device['Device Name']} className="bg-slate-800">
+                        {device['Device Name']}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                {departmentErrors.device_name && (
+                  <p className="text-red-400 text-xs mt-1">{departmentErrors.device_name}</p>
                 )}
               </div>
 
@@ -1067,6 +1123,7 @@ export default function HomePage() {
                   setNewDepartment({
                     department_name: '',
                     branch_id: '',
+                    device_name: '' ,
                     // name: '',
                     email: '',
                     password: ''
