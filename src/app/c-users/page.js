@@ -27,6 +27,7 @@ export default function HomePage() {
   const [fingerprintSuccess, setFingerprintSuccess] = useState(false);
   const [companyName, setCompanyName] = useState(''); 
   const [showDepartmentsModal, setShowDepartmentsModal] = useState(false);
+  const [scanStarted, setScanStarted] = useState(false);
   const [departments, setDepartments] = useState([]);
   const [departmentsLoading, setDepartmentsLoading] = useState(false);
   const [showAddDepartmentModal, setShowAddDepartmentModal] = useState(false);
@@ -320,6 +321,7 @@ export default function HomePage() {
     setAvailableFingerprintIds([]);
     setFingerprintSuccess(false);
     setPollingMessage('');
+    setScanStarted(false);
     try {
       const token = sessionStorage.getItem('access_token');
       // Get available fingerprint IDs
@@ -350,6 +352,7 @@ export default function HomePage() {
 
   const handleScanFinger = async () => {
     if (!selectedEmployee || !fingerprintId) return;
+    setScanStarted(true);
     setIsFingerprintLoading(true);
     setPollingMessage('Assigning fingerprint...');
     setFingerprintSuccess(false);
@@ -376,6 +379,7 @@ export default function HomePage() {
       setPollingMessage('Failed to assign fingerprint.');
       setIsFingerprintLoading(false);
       setIsPolling(false);
+      setScanStarted(false);
       console.error(err);
     }
   };
@@ -470,6 +474,32 @@ export default function HomePage() {
     setPollingMessage('');
     setIsFingerprintLoading(false);
     setIsPolling(false);
+    setScanStarted(false);
+  };
+
+  const cancelEnrollment = async () => {
+    if (!selectedEmployee) return;
+    
+    try {
+      const token = sessionStorage.getItem('access_token');
+      await fetch('https://emsapi.disagglobal.com/api/manageusers/cancel-enrollment', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          serialnumber: selectedEmployee.employeeId,
+          device_uid: selectedEmployee.device_uid
+        }),
+      });
+    } catch (err) {
+      console.error('Failed to cancel enrollment:', err);
+    }
+    
+    // Close modal regardless of API success/failure
+    closeFingerprintModal();
   };
 
   const fetchDevices = async () => {
@@ -904,13 +934,15 @@ export default function HomePage() {
                 <div className="text-green-400 text-center font-semibold">Fingerprint scan completed and saved!</div>
               ) : (
                 <>
-                  <button
-                    onClick={closeFingerprintModal}
-                    className="bg-white/10 border border-white/20 text-white px-4 py-3 rounded-xl font-semibold hover:bg-white/20 transition-all duration-200"
-                    disabled={isFingerprintLoading || isPolling}
-                  >
-                    Cancel
-                  </button>
+                  {scanStarted && (
+                    <button
+                      onClick={cancelEnrollment}
+                      className="bg-white/10 border border-white/20 text-white px-4 py-3 rounded-xl font-semibold hover:bg-white/20 transition-all duration-200"
+                      disabled={isFingerprintLoading || isPolling}
+                    >
+                      Cancel
+                    </button>
+                  )}
                   <button
                     onClick={handleScanFinger}
                     className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-4 py-3 rounded-xl font-semibold shadow-lg hover:shadow-blue-500/25 transform hover:scale-105 transition-all duration-300"
