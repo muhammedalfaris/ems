@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useContext, createContext } from 'react';
+import { useState, useEffect,} from 'react';
 import * as XLSX from 'xlsx';
 import { Calendar, Clock, Filter, Download, Search, FileText, Users, Activity, ChevronDown, ChevronUp } from 'lucide-react';
 import Navbar from '@/components/Navbar';
@@ -28,7 +28,6 @@ export default function UserLogPage() {
   const [filterExpanded, setFilterExpanded] = useState(false);
   const [personCount, setPersonCount] = useState(0);
 
-  // Fetch today's logs and devices on component mount
   useEffect(() => {
     fetchTodaysLogs();
     fetchDevices();
@@ -82,8 +81,7 @@ export default function UserLogPage() {
     setDevicesLoading(true);
     try {
       const token = sessionStorage.getItem('access_token');
-      
-      // Fetch devices
+
       const devicesResponse = await fetch('https://emsapi.disagglobal.com/api/devices/list', {
         method: 'GET',
         headers: {
@@ -104,8 +102,7 @@ export default function UserLogPage() {
       }
 
       setDevices(devicesData.devices);
-      
-      // Fetch departments from the new API
+
       const departmentsResponse = await fetch('https://emsapi.disagglobal.com/api/departments', {
         method: 'GET',
         headers: {
@@ -120,8 +117,7 @@ export default function UserLogPage() {
       }
 
       const departmentsData = await departmentsResponse.json();
-      
-      // Extract department names from the response
+
       const departmentNames = departmentsData.data.map(dept => dept.department_name);
       setDepartments(departmentNames);
       
@@ -177,7 +173,7 @@ export default function UserLogPage() {
         id: log.id,
         name: log.username,
         serialNumber: log.serialnumber,
-        deviceDept: log.department_name || log.device_dep, // Handle both possible field names
+        deviceDept: log.department_name || log.device_dep, 
         date: log.checkindate,
         timeIn: log.timein,
         timeOut: log.timeout,
@@ -248,7 +244,7 @@ export default function UserLogPage() {
       }));
 
       // Add summary row at the end
-      exportData.push({});  // Empty row for spacing
+      exportData.push({});  
       exportData.push({
         'Name': 'SUMMARY',
         'Employee ID': '',
@@ -275,12 +271,12 @@ export default function UserLogPage() {
 
     // Style the summary row if it exists (for single person filter)
     if (isSinglePersonDateFilter) {
-      const summaryRowIndex = exportData.length - 1; // Last row (0-indexed)
-      const cellAddress = XLSX.utils.encode_cell({r: summaryRowIndex, c: 0}); // 'Name' column
+      const summaryRowIndex = exportData.length - 1; 
+      const cellAddress = XLSX.utils.encode_cell({r: summaryRowIndex, c: 0}); 
       if (ws[cellAddress]) {
         ws[cellAddress].s = {
           font: { bold: true },
-          fill: { fgColor: { rgb: "FFFF00" } } // Yellow background
+          fill: { fgColor: { rgb: "FFFF00" } } 
         };
       }
     }
@@ -511,30 +507,6 @@ export default function UserLogPage() {
                         )}
                       </div>
                     </div>
-
-                    {/* <div>
-                      <label className="block text-gray-300 text-sm font-medium mb-2">Device</label>
-                      <div className="relative">
-                        <select
-                          value={filters.device}
-                          onChange={(e) => handleFilterChange('device', e.target.value)}
-                          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent appearance-none"
-                          disabled={devicesLoading}
-                        >
-                          <option value="">Select Device</option>
-                          {devices.map((device, index) => (
-                            <option key={index} value={device["Device Name"]} className="bg-gray-800 text-white">
-                              {device["Device Name"]} - {device["Device Department"]}
-                            </option>
-                          ))}
-                        </select>
-                        {devicesLoading && (
-                          <div className="absolute right-3 top-3">
-                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                          </div>
-                        )}
-                      </div>
-                    </div> */}
                   </div>
 
                   {/* Error Message */}
