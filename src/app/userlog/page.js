@@ -5,7 +5,6 @@ import * as XLSX from 'xlsx';
 import { Calendar, Clock, Filter, Download, Search, FileText, Users, Activity, ChevronDown, ChevronUp } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 
-export const PersonCountContext = createContext();
 
 export default function UserLogPage() {
   const [filters, setFilters] = useState({
@@ -342,7 +341,6 @@ export default function UserLogPage() {
   };
 
   return (
-    <PersonCountContext.Provider value={personCount}>
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
         {/* Animated Background Elements */}
         <div className="absolute inset-0">
@@ -673,6 +671,5 @@ export default function UserLogPage() {
           </div>
         </div>
       </div>
-    </PersonCountContext.Provider>
   );
 }
