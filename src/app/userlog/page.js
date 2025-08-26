@@ -4,6 +4,7 @@ import { useState, useEffect,} from 'react';
 import * as XLSX from 'xlsx';
 import { Calendar, Clock, Filter, Download, Search, FileText, Users, Activity, ChevronDown, ChevronUp } from 'lucide-react';
 import Navbar from '@/components/Navbar';
+import ExcelJS from 'exceljs';
 
 
 export default function UserLogPage() {
@@ -25,7 +26,13 @@ export default function UserLogPage() {
   const [devicesLoading, setDevicesLoading] = useState(false);
   const [error, setError] = useState('');
   const [filterExpanded, setFilterExpanded] = useState(false);
-  const [personCount, setPersonCount] = useState(0);
+  const [showConsolidateModal, setShowConsolidateModal] = useState(false);
+  const [consolidateFilters, setConsolidateFilters] = useState({
+    month: '',
+    year: new Date().getFullYear().toString()
+  });
+  const [consolidateLoading, setConsolidateLoading] = useState(false);
+  const [consolidateError, setConsolidateError] = useState('');
 
   useEffect(() => {
     fetchTodaysLogs();
@@ -339,6 +346,258 @@ export default function UserLogPage() {
     
     return `${hours}h ${minutes}m`;
   };
+  const handleConsolidateExport = async () => {
+    if (!consolidateFilters.month || !consolidateFilters.year) {
+      setConsolidateError('Please select both month and year');
+      return;
+    }
+  
+    setConsolidateLoading(true);
+    setConsolidateError('');
+  
+    try {
+      const token = sessionStorage.getItem('access_token');
+      const response = await fetch(
+        `https://emsapi.disagglobal.com/api/attendance-status?type=monthly&month=${consolidateFilters.month}&year=${consolidateFilters.year}`,
+        {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+  
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+  
+      const result = await response.json();
+      generateConsolidateReport(result.data);
+      setShowConsolidateModal(false);
+    } catch (err) {
+      setConsolidateError(`Failed to fetch data: ${err.message}`);
+    } finally {
+      setConsolidateLoading(false);
+    }
+  };
+  
+  const generateConsolidateReport = async (data) => {
+    if (!data || data.length === 0) {
+      alert('No data available for the selected month');
+      return;
+    }
+  
+    const employees = [...new Set(data.map(item => item.name))];
+    const dates = [...new Set(data.map(item => item.date))].sort();
+  
+    const attendanceMatrix = {};
+    employees.forEach(emp => {
+      attendanceMatrix[emp] = {};
+      dates.forEach(date => {
+        attendanceMatrix[emp][date] = data.find(item => 
+          item.name === emp && item.date === date
+        ) || { status: 'Absent', department: '' };
+      });
+    });
+  
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Attendance Report');
+  
+
+    worksheet.columns = [
+      { width: 22 }, // Employee Name
+      { width: 18 }, // Department
+      { width: 15 }, // Days Present (moved here)
+      ...dates.map(() => ({ width: 12 })), // Date columns
+      { width: 15 }  // Attendance % (moved to last)
+    ];
+  
+    const monthName = new Date(consolidateFilters.year, consolidateFilters.month - 1, 1)
+      .toLocaleString('default', { month: 'long' });
+  
+    const titleRow = worksheet.addRow([`Attendance Report - ${monthName} ${consolidateFilters.year}`]);
+    worksheet.mergeCells(1, 1, 1, 3 + dates.length + 1); 
+    
+    titleRow.height = 35;
+    titleRow.getCell(1).font = { 
+      bold: true, 
+      size: 14,
+      color: { argb: 'FF366092' }
+    };
+    titleRow.getCell(1).alignment = { 
+      horizontal: 'center', 
+      vertical: 'middle' 
+    };
+    titleRow.getCell(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFF0F8FF' } 
+    };
+
+    worksheet.addRow([]);
+  
+    const headerRow = worksheet.addRow([
+      'Employee Name', 
+      'Department',
+      'Days Present',
+      ...dates.map(date => {
+        const dateObj = new Date(date);
+        const day = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
+        const formattedDate = dateObj.toLocaleDateString('en-GB', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric'
+        });
+        return `${formattedDate}\n(${day})`;
+      }),      
+      'Attendance %'
+    ]);
+  
+    headerRow.height = 40; 
+    headerRow.eachCell((cell, colNumber) => {
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF366092' }
+      };
+      cell.font = { 
+        bold: true, 
+        color: { argb: 'FFFFFFFF' },
+        size: 10 
+      };
+      cell.alignment = { 
+        horizontal: 'center', 
+        vertical: 'middle',
+        wrapText: true 
+      };
+      cell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' }
+      };
+    });
+
+    employees.forEach(employee => {
+      const empData = attendanceMatrix[employee];
+  
+      let presentDays = 0;
+      let totalWorkingDays = 0;
+      let totalDays = dates.length;
+  
+      const statusData = dates.map(date => {
+        const attendance = empData[date];
+        const dateObj = new Date(date);
+        const isSunday = dateObj.getDay() === 0;
+        
+        if (!isSunday) {
+          totalWorkingDays++;
+          if (attendance.status === 'Present') {
+            presentDays++;
+          }
+        } else {
+          if (attendance.status === 'Present') {
+            presentDays++;
+          }
+        }
+        
+        return {
+          status: attendance.status,
+          isSunday,
+          displayText: attendance.status === 'Present' ? '✓' : 
+                      isSunday ? '-' : '✗'
+        };
+      });
+  
+      const attendancePercentage = totalWorkingDays > 0 ? 
+        ((presentDays / totalWorkingDays) * 100).toFixed(1) + '%' : '0%';
+      
+      const daysPresent = `${presentDays}/${totalDays}`;
+
+      const dataRow = worksheet.addRow([
+        employee, // Employee Name
+        empData[dates[0]]?.department || '', // Department
+        daysPresent, // Days Present 
+        ...statusData.map(item => item.displayText), // Date columns
+        attendancePercentage // Attendance % 
+      ]);
+  
+      dataRow.height = 29;
+
+      dataRow.getCell(1).font = { bold: true };
+      dataRow.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' };
+
+      dataRow.getCell(2).alignment = { horizontal: 'left', vertical: 'middle' };
+
+      dataRow.getCell(3).font = { bold: true };
+      dataRow.getCell(3).alignment = { horizontal: 'center', vertical: 'middle' };
+      dataRow.getCell(3).border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' }
+      };
+  
+      statusData.forEach((item, index) => {
+        const cell = dataRow.getCell(4 + index); 
+        
+        if (item.status === 'Present') {
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FFC6EFCE' }
+          };
+          cell.font = { color: { argb: 'FF006100' } }; 
+        } else if (item.isSunday) {
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FFD9D9D9' }
+          };
+          cell.font = { color: { argb: 'FF595959' } }; 
+        } else {
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FFFFC7CE' } 
+          };
+          cell.font = { color: { argb: 'FF9C0006' } }; 
+        }
+        
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        cell.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' }
+        };
+      });
+
+      const percentageCell = dataRow.getCell(4 + dates.length); 
+      percentageCell.font = { bold: true };
+      percentageCell.alignment = { horizontal: 'center', vertical: 'middle' };
+      percentageCell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' }
+      };
+    });
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { 
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+    });
+    
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Attendance-Report-${monthName}-${consolidateFilters.year}.xlsx`;
+    link.click();
+    window.URL.revokeObjectURL(url);
+  };
 
   return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
@@ -380,6 +639,13 @@ export default function UserLogPage() {
                 <h1 className="text-3xl font-bold text-white mb-2">User Activity Logs</h1>
                 <p className="text-gray-300">Filter and export employee attendance logs</p>
               </div>
+              <button
+                onClick={() => setShowConsolidateModal(true)}
+                className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-blue-500/25 transform hover:scale-105 transition-all duration-300 flex items-center"
+              >
+                <FileText className="w-5 h-5 mr-2" />
+                Consolidate Report
+              </button>
               {logs.length > 0 && (
                 <button
                   onClick={handleExportExcel}
@@ -390,6 +656,78 @@ export default function UserLogPage() {
                 </button>
               )}
             </div>
+            {/* Consolidate Report Modal */}
+            {showConsolidateModal && (
+              <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div className="backdrop-blur-lg bg-white/10 rounded-2xl border border-white/20 p-6 w-full max-w-md">
+                  <h3 className="text-xl font-semibold text-white mb-4">Generate Consolidate Report</h3>
+                  
+                  {consolidateError && (
+                    <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm">
+                      {consolidateError}
+                    </div>
+                  )}
+
+                  <div className="space-y-4 mb-6">
+                    <div>
+                      <label className="block text-gray-300 text-sm font-medium mb-2">Month</label>
+                      <select
+                        value={consolidateFilters.month}
+                        onChange={(e) => setConsolidateFilters(prev => ({...prev, month: e.target.value}))}
+                        className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500 appearance-none"
+                        required
+                      >
+                        <option value="">Select Month</option>
+                        {Array.from({length: 12}, (_, i) => (
+                          <option key={i + 1} value={i + 1} className="bg-gray-800 text-white">
+                            {new Date(2000, i, 1).toLocaleString('default', { month: 'long' })}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-300 text-sm font-medium mb-2">Year</label>
+                      <input
+                        type="number"
+                        value={consolidateFilters.year}
+                        onChange={(e) => setConsolidateFilters(prev => ({...prev, year: e.target.value}))}
+                        className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        min="2020"
+                        max="2030"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button
+                      onClick={handleConsolidateExport}
+                      disabled={consolidateLoading || !consolidateFilters.month || !consolidateFilters.year}
+                      className="flex-1 bg-gradient-to-r from-purple-500 to-cyan-500 text-white px-4 py-3 rounded-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                    >
+                      {consolidateLoading ? (
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                      ) : (
+                        <>
+                          <Download className="w-4 h-4 mr-2" />
+                          Export
+                        </>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowConsolidateModal(false);
+                        setConsolidateError('');
+                      }}
+                      className="flex-1 bg-white/10 border border-white/20 text-white px-4 py-3 rounded-xl font-semibold hover:bg-white/20 transition-all duration-300"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Filter Section */}
             <div className="backdrop-blur-lg bg-white/10 rounded-2xl border border-white/20 p-6 mb-8">

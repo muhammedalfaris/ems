@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "exceljs": "^4.4.0",
     "lucide-react": "^0.517.0",
     "next": "15.3.4",
     "react": "^19.0.0",
