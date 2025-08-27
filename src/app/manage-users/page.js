@@ -49,7 +49,6 @@ function ManageUsersContent() {
       const data = await response.json();
       
       // Transform the response data to match the expected format
-      // The response appears to be a single device object, but we'll handle it as an array
       const departmentList = data.data || [];
       const transformedDepartments = departmentList.map((dept, index) => ({
         id: dept.id,
@@ -65,7 +64,6 @@ function ManageUsersContent() {
         departments: 'Failed to load departments. Please try again.'
       }));
       
-      // Fallback to mock data if API fails
       const mockDepartments = [
         { id: 1, name: 'Engineering', department: 'Tech', displayName: 'Engineering (Tech)' },
         { id: 2, name: 'Human Resources', department: 'HR', displayName: 'Human Resources (HR)' },
@@ -81,7 +79,6 @@ function ManageUsersContent() {
   };
 
   useEffect(() => {
-    // Check authentication
     const token = sessionStorage.getItem('access_token');
     if (!token) {
       router.push('/login');
@@ -90,7 +87,6 @@ function ManageUsersContent() {
     
     fetchDepartments();
     if (isEditMode) {
-      // Get user data from sessionStorage
       const stored = sessionStorage.getItem('editUserData');
       if (stored) {
         const data = JSON.parse(stored);
@@ -101,7 +97,6 @@ function ManageUsersContent() {
           employeeId: String(data.employeeId || ''),
           gender: String(data.gender || ''),
         });
-        // Optionally clear after use
         // sessionStorage.removeItem('editUserData');
       }
     }

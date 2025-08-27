@@ -13,7 +13,7 @@ export default function DevicePage() {
   const [newDevice, setNewDevice] = useState({
     name: '',
     department: '',
-    mode: '0' // Default to enrollment mode
+    mode: '0' 
   });
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState(null);
@@ -38,14 +38,13 @@ export default function DevicePage() {
       
       const data = await response.json();
       
-      // Check if data has the expected structure
       if (!data.devices || !Array.isArray(data.devices)) {
         throw new Error('Invalid devices data format');
       }
       
       // Transform API response to match component structure
       const transformedDevices = data.devices.map((device, index) => ({
-        id: device['Device UID'] || index + 1, // Use UID as ID if available
+        id: device['Device UID'] || index + 1, 
         name: device['Device Name'] || 'Unknown Device',
         department: device['Device Department'] || 'Unknown Department',
         uid: device['Device UID'] || 'N/A',
@@ -62,7 +61,6 @@ export default function DevicePage() {
     }
   };
 
-  // Add device via API
   const addDevice = async (deviceData) => {
     try {
       setSubmitting(true);
@@ -89,7 +87,6 @@ export default function DevicePage() {
       const responseData = await response.json();
       console.log('Device added:', responseData);
       
-      // Refresh the devices list
       await fetchDevices();
       return true;
     } catch (error) {
@@ -101,7 +98,6 @@ export default function DevicePage() {
     }
   };
 
-  // Delete device via API
   const deleteDevice = async (deviceName) => {
     try {
       setDeleting(deviceName);
@@ -126,7 +122,6 @@ export default function DevicePage() {
       const responseData = await response.json();
       console.log('Device deleted:', responseData);
       
-      // Remove device from local state
       setDevices(devices.filter(device => device.name !== deviceName));
     } catch (error) {
       console.error('Error deleting device:', error);
@@ -140,7 +135,6 @@ export default function DevicePage() {
     fetchDevices();
   }, []);
 
-  // Calculate stats
   const today = new Date();
   const todayStr = today.toISOString().split('T')[0];
   // const addedToday = devices.filter(device => device.date === todayStr).length;
@@ -219,7 +213,6 @@ export default function DevicePage() {
 
     } catch (error) {
       console.error('Error updating device mode:', error);
-      // Revert the change if API call fails
       setDevices(devices.map(d => 
         d.id === deviceId ? { ...d, mode: originalMode } : d
       ));

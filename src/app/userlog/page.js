@@ -73,7 +73,6 @@ export default function UserLogPage() {
       }));
 
       setLogs(transformedLogs);
-      setPersonCount(transformedLogs.length);
       setIsFiltered(false);
     } catch (err) {
       setError(`Failed to fetch today's logs: ${err.message}`);
@@ -154,7 +153,7 @@ export default function UserLogPage() {
       if (filters.toDate) params.append('date_to', filters.toDate);
       if (filters.fromTime) params.append('time_from', filters.fromTime);
       if (filters.toTime) params.append('time_to', filters.toTime);
-      if (filters.department) params.append('department_name', filters.department); // Changed from device_dep to department_name
+      if (filters.department) params.append('department_name', filters.department);
       if (filters.employeeName) params.append('username', filters.employeeName);
 
       const apiUrl = `https://emsapi.disagglobal.com/api/logs?${params.toString()}`;
@@ -249,7 +248,6 @@ export default function UserLogPage() {
         'Working Hours': calculateWorkingHours(log.timeIn, log.timeOut)
       }));
 
-      // Add summary row at the end
       exportData.push({});  
       exportData.push({
         'Name': 'SUMMARY',
@@ -411,7 +409,7 @@ export default function UserLogPage() {
       { width: 18 }, // Department
       { width: 15 }, // Days Present (moved here)
       ...dates.map(() => ({ width: 12 })), // Date columns
-      { width: 15 }  // Attendance % (moved to last)
+      { width: 15 }  // Attendance % 
     ];
   
     const monthName = new Date(consolidateFilters.year, consolidateFilters.month - 1, 1)

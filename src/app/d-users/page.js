@@ -42,7 +42,6 @@ export default function HomePage() {
       return;
     }
     
-    // Get company name from sessionStorage
     const storedCompanyName = sessionStorage.getItem('company_name');
     if (storedCompanyName) {
       setCompanyName(storedCompanyName);
@@ -135,7 +134,6 @@ export default function HomePage() {
   // };
 
   const handleEditEmployee = (employee) => {
-    // Store employee data in sessionStorage for editing
     sessionStorage.setItem('editUserData', JSON.stringify(employee));
     router.push(`/manage-users?id=${employee.id}`);
   };
@@ -164,12 +162,10 @@ export default function HomePage() {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      // Remove the deleted employee from the state
       setEmployees(employees.filter(emp => emp.id !== employeeToDelete.id));
       
       console.log('Employee deleted successfully:', employeeToDelete);
-      
-      // Close modal and reset state
+       
       setShowDeleteModal(false);
       setEmployeeToDelete(null);
     } catch (err) {
@@ -196,7 +192,6 @@ export default function HomePage() {
     setScanStarted(false);
     try {
       const token = sessionStorage.getItem('access_token');
-      // Get available fingerprint IDs
       const idsRes = await fetch(`https://emsapi.disagglobal.com/api/manageusers/fingerprint-ids?device_uid=${employee.device_uid}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -243,7 +238,6 @@ export default function HomePage() {
           fingerprint_id: parseInt(fingerprintId)
         }),
       });
-      // Start polling for scan status
       setIsPolling(true);
       setPollingMessage('Waiting for fingerprint scan...');
       pollScanStatus(selectedEmployee.employeeId, fingerprintId);
@@ -269,14 +263,13 @@ export default function HomePage() {
         body: JSON.stringify({ device_uid }),
       });
     } catch (err) {
-      // Optionally log or ignore
       console.error('Failed to deselect fingerprint:', err);
     }
   };
 
   const pollScanStatus = async (serialnumber, fingerprintId) => {
     let attempts = 0;
-    const maxAttempts = 30; // ~1 min
+    const maxAttempts = 30; 
     const poll = async () => {
       try {
         const token = sessionStorage.getItem('access_token');
@@ -293,7 +286,6 @@ export default function HomePage() {
             setPollingMessage('Fingerprint scan completed and saved!');
             setFingerprintSuccess(true);
             setIsPolling(false);
-            // Deselect the fingerprint after success
             await deselectFingerprint(selectedEmployee.device_uid);
             setTimeout(() => {
               setShowFingerprintModal(false);
@@ -302,7 +294,6 @@ export default function HomePage() {
               setAvailableFingerprintIds([]);
               setFingerprintSuccess(false);
               setPollingMessage('');
-              // Refresh the employees list to update fingerprint status
               fetchEmployees();
             }, 1500);
             return;
@@ -370,14 +361,11 @@ export default function HomePage() {
       console.error('Failed to cancel enrollment:', err);
     }
     
-    // Close modal regardless of API success/failure
     closeFingerprintModal();
   };
 
-  // Calculate unique devices count
   const uniqueDevices = [...new Set(employees.map(emp => emp.device))].length;
 
-  // Show loading state
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
@@ -389,7 +377,6 @@ export default function HomePage() {
     );
   }
 
-  // Show error state
   if (error) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">

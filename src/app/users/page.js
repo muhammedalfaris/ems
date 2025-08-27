@@ -26,9 +26,23 @@ export default function HomePage() {
   const [pollingMessage, setPollingMessage] = useState(''); 
   const [fingerprintSuccess, setFingerprintSuccess] = useState(false); 
   const [scanStarted, setScanStarted] = useState(false);
+  const [showCompaniesModal, setShowCompaniesModal] = useState(false);
+  const [companies, setCompanies] = useState([]);
+  const [companiesLoading, setCompaniesLoading] = useState(false);
+  const [showAddCompanyModal, setShowAddCompanyModal] = useState(false);
+  const [newCompany, setNewCompany] = useState({
+    name: '',
+    email: '',
+    address: '',
+    phone: '',
+    website: '',
+    username: '',
+    email_user: '',
+    password: ''
+  });
+  const [companyErrors, setCompanyErrors] = useState({});
 
   useEffect(() => {
-    // Check authentication
     const token = sessionStorage.getItem('access_token');
     const userType = sessionStorage.getItem('user_type');
     
@@ -47,6 +61,7 @@ export default function HomePage() {
     
     fetchEmployees();
     fetchActiveCount();
+    fetchCompanies();
   }, [router]);
 
   const fetchEmployees = async () => {
@@ -67,7 +82,7 @@ export default function HomePage() {
         
         const result = await response.json();
         
-        // Transform API data to match the expected format
+        // Transforming API data to match the expected format
         const transformedEmployees = result.data.map(employee => ({
           id: employee.id,
           name: employee.name,
@@ -76,7 +91,7 @@ export default function HomePage() {
           hourlyPay: '₹25.00', // Default value since not provided in API
           fingerId: employee.fingerprint_id,
           date: employee.date,
-          device: employee.device_name,
+          company: employee.company_name,
           device_uid : employee.device_uid,
           fingerprintStatus: employee.fingerprint_status
         }));
@@ -131,7 +146,6 @@ export default function HomePage() {
   // };
 
   const handleEditEmployee = (employee) => {
-    // Store employee data in sessionStorage for editing
     sessionStorage.setItem('editUserData', JSON.stringify(employee));
     router.push(`/manage-users?id=${employee.id}`);
   };
@@ -160,7 +174,6 @@ export default function HomePage() {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      // Remove the deleted employee from the state
       setEmployees(employees.filter(emp => emp.id !== employeeToDelete.id));
       
       console.log('Employee deleted successfully:', employeeToDelete);
@@ -192,7 +205,6 @@ export default function HomePage() {
     setScanStarted(false);
     try {
       const token = sessionStorage.getItem('access_token');
-      // Get available fingerprint IDs
       const idsRes = await fetch(`https://emsapi.disagglobal.com/api/manageusers/fingerprint-ids?device_uid=${employee.device_uid}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -265,7 +277,6 @@ export default function HomePage() {
         body: JSON.stringify({ device_uid }),
       });
     } catch (err) {
-      // Optionally log or ignore
       console.error('Failed to deselect fingerprint:', err);
     }
   };
@@ -298,7 +309,6 @@ export default function HomePage() {
               setAvailableFingerprintIds([]);
               setFingerprintSuccess(false);
               setPollingMessage('');
-              // Refresh the employees list to update fingerprint status
               fetchEmployees();
             }, 1500);
             return;
@@ -366,16 +376,101 @@ export default function HomePage() {
       console.error('Failed to cancel enrollment:', err);
     }
     
-    // Close modal regardless of API success/failure
     closeFingerprintModal();
   };
+  const fetchCompanies = async () => {
+  try {
+    setCompaniesLoading(true);
+    const token = sessionStorage.getItem('access_token');
+    const response = await fetch('https://emsapi.disagglobal.com/api/company', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json',
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    setCompanies(result || []);
+  } catch (err) {
+    console.error('Error fetching companies:', err);
+    setCompanies([]);
+  } finally {
+    setCompaniesLoading(false);
+  }
+};
 
-  // Calculate unique devices count
-  const uniqueDevices = [...new Set(employees.map(emp => emp.device))].length;
+  const handleAddCompany = async () => {
+    const errors = {};
+    if (!newCompany.name) errors.name = 'Company name is required';
+    if (!newCompany.email) errors.email = 'Company email is required';
+    if (!newCompany.username) errors.username = 'Username is required';
+    if (!newCompany.email_user) errors.email_user = 'Admin email is required';
+    if (!newCompany.password || newCompany.password.length < 6) {
+      errors.password = 'Password must be at least 6 characters';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setCompanyErrors(errors);
+      return;
+    }
+
+    try {
+      setCompaniesLoading(true);
+      const token = sessionStorage.getItem('access_token');
+      
+      const payload = {
+        name: newCompany.name,
+        email: newCompany.email,
+        address: newCompany.address,
+        phone: newCompany.phone,
+        website: newCompany.website,
+        username: newCompany.username,
+        email_user: newCompany.email_user,
+        password: newCompany.password
+      };
+
+      const response = await fetch('https://emsapi.disagglobal.com/api/companies', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      await fetchCompanies();
+      setShowAddCompanyModal(false);
+      setNewCompany({
+        name: '',
+        email: '',
+        address: '',
+        phone: '',
+        website: '',
+        username: '',
+        email_user: '',
+        password: ''
+      });
+      setCompanyErrors({});
+    } catch (err) {
+      console.error('Error adding company:', err);
+      setCompanyErrors({ submit: err.message || 'Failed to add company' });
+    } finally {
+      setCompaniesLoading(false);
+    }
+  };
 
   // Show loading state
   if (loading) {
-    return (
+    return ( 
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-white mb-4"></div>
@@ -479,14 +574,19 @@ export default function HomePage() {
               </div>
             </Link>
             
-            <div className="backdrop-blur-lg bg-white/10 rounded-2xl p-6 border border-white/20">
+            <div 
+              className="cursor-pointer backdrop-blur-lg bg-white/10 rounded-2xl p-6 border border-white/20 transition hover:scale-[1.01] hover:border-white/40"
+              onClick={() => {
+                setShowCompaniesModal(true);
+              }}
+            >
               <div className="flex items-center">
                 <div className="p-3 bg-gradient-to-r from-orange-500 to-red-500 rounded-xl">
                   <Smartphone className="w-6 h-6 text-white" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-gray-300 text-sm">Devices</p>
-                  <p className="text-2xl font-bold text-white">{uniqueDevices}</p>
+                  <p className="text-gray-300 text-sm">Companies</p>
+                  <p className="text-2xl font-bold text-white">{companies.length}</p>
                 </div>
               </div>
             </div>
@@ -505,7 +605,7 @@ export default function HomePage() {
                     {/* <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Hourly Pay</th> */}
                     {/* <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Finger ID</th> */}
                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Date</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Device</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Company</th>
                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-200">Actions</th>
                   </tr>
                 </thead>
@@ -518,7 +618,7 @@ export default function HomePage() {
                       {/* <td className="px-6 py-4 text-green-400 font-semibold">{employee.hourlyPay}</td> */}
                       {/* <td className="px-6 py-4 text-purple-300">{employee.fingerId}</td> */}
                       <td className="px-6 py-4 text-gray-300">{employee.date}</td>
-                      <td className="px-6 py-4 text-cyan-300">{employee.device}</td>
+                      <td className="px-6 py-4 text-cyan-300">{employee.company}</td>
                       <td className="px-6 py-4">
                         <div className="flex space-x-2">
                           {/* <button
@@ -794,6 +894,235 @@ export default function HomePage() {
                   </button>
                 </>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Companies Modal */}
+      {showCompaniesModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="backdrop-blur-lg bg-white/10 rounded-2xl border border-white/20 p-6 max-w-md w-full mx-4 shadow-2xl">
+            {/* Modal Header */}
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-white">Companies</h3>
+              <button
+                onClick={() => setShowCompaniesModal(false)}
+                className="p-1 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="mb-6 max-h-96 overflow-y-auto">
+              {companiesLoading ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+                </div>
+              ) : companies.length === 0 ? (
+                <p className="text-gray-400 text-center py-4">No companies found</p>
+              ) : (
+                <ul className="space-y-2">
+                  {companies.map(company => (
+                    <li key={company.id} className="p-3 bg-white/5 rounded-lg border border-white/10">
+                      <p className="text-white font-medium">{company.name}</p>
+                      <p className="text-gray-400 text-sm">{company.address}</p>
+                      <p className="text-gray-400 text-sm">Branches: {company.branch_count}</p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex justify-end">
+              <button
+                onClick={() => setShowAddCompanyModal(true)}
+                className="bg-gradient-to-r from-purple-500 to-cyan-500 text-white px-4 py-3 rounded-xl font-semibold shadow-lg hover:shadow-purple-500/25 transform hover:scale-105 transition-all duration-300"
+              >
+                <Plus className="w-4 h-4 mr-2 inline" />
+                Add Company
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Company Modal */}
+      {showAddCompanyModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="backdrop-blur-lg bg-white/10 rounded-2xl border border-white/20 p-6 max-w-md w-full mx-4 shadow-2xl">
+            {/* Modal Header */}
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-white">Add New Company</h3>
+              <button
+                onClick={() => {
+                  setShowAddCompanyModal(false);
+                  setNewCompany({
+                    name: '',
+                    email: '',
+                    address: '',
+                    phone: '',
+                    website: '',
+                    username: '',
+                    email_user: '',
+                    password: ''
+                  });
+                  setCompanyErrors({});
+                }}
+                className="p-1 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200"
+                disabled={companiesLoading}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="mb-6 space-y-4 max-h-96 overflow-y-auto">
+              <div>
+                <label className="block text-gray-300 text-sm mb-2">Company Name</label>
+                <input
+                  type="text"
+                  value={newCompany.name}
+                  onChange={(e) => setNewCompany({...newCompany, name: e.target.value})}
+                  className="w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="Enter company name"
+                />
+                {companyErrors.name && (
+                  <p className="text-red-400 text-xs mt-1">{companyErrors.name}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-gray-300 text-sm mb-2">Company Email</label>
+                <input
+                  type="email"
+                  value={newCompany.email}
+                  onChange={(e) => setNewCompany({...newCompany, email: e.target.value})}
+                  className="w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="Enter company email"
+                />
+                {companyErrors.email && (
+                  <p className="text-red-400 text-xs mt-1">{companyErrors.email}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-gray-300 text-sm mb-2">Address</label>
+                <input
+                  type="text"
+                  value={newCompany.address}
+                  onChange={(e) => setNewCompany({...newCompany, address: e.target.value})}
+                  className="w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="Enter company address"
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-300 text-sm mb-2">Phone</label>
+                <input
+                  type="tel"
+                  value={newCompany.phone}
+                  onChange={(e) => setNewCompany({...newCompany, phone: e.target.value})}
+                  className="w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="Enter phone number"
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-300 text-sm mb-2">Website</label>
+                <input
+                  type="url"
+                  value={newCompany.website}
+                  onChange={(e) => setNewCompany({...newCompany, website: e.target.value})}
+                  className="w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="Enter website URL"
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-300 text-sm mb-2">Admin Username</label>
+                <input
+                  type="text"
+                  value={newCompany.username}
+                  onChange={(e) => setNewCompany({...newCompany, username: e.target.value})}
+                  className="w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="Enter admin username"
+                />
+                {companyErrors.username && (
+                  <p className="text-red-400 text-xs mt-1">{companyErrors.username}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-gray-300 text-sm mb-2">Admin Email</label>
+                <input
+                  type="email"
+                  value={newCompany.email_user}
+                  onChange={(e) => setNewCompany({...newCompany, email_user: e.target.value})}
+                  className="w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="Enter admin email"
+                />
+                {companyErrors.email_user && (
+                  <p className="text-red-400 text-xs mt-1">{companyErrors.email_user}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-gray-300 text-sm mb-2">Admin Password</label>
+                <input
+                  type="password"
+                  value={newCompany.password}
+                  onChange={(e) => setNewCompany({...newCompany, password: e.target.value})}
+                  className="w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  placeholder="Enter password (min 6 characters)"
+                />
+                {companyErrors.password && (
+                  <p className="text-red-400 text-xs mt-1">{companyErrors.password}</p>
+                )}
+              </div>
+
+              {companyErrors.submit && (
+                <div className="text-red-400 text-sm mt-2">{companyErrors.submit}</div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setShowAddCompanyModal(false);
+                  setNewCompany({
+                    name: '',
+                    email: '',
+                    address: '',
+                    phone: '',
+                    website: '',
+                    username: '',
+                    email_user: '',
+                    password: ''
+                  });
+                  setCompanyErrors({});
+                }}
+                className="bg-white/10 border border-white/20 text-white px-4 py-3 rounded-xl font-semibold hover:bg-white/20 transition-all duration-200"
+                disabled={companiesLoading}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddCompany}
+                disabled={companiesLoading}
+                className="bg-gradient-to-r from-purple-500 to-cyan-500 text-white px-4 py-3 rounded-xl font-semibold shadow-lg hover:shadow-purple-500/25 transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {companiesLoading ? (
+                  <div className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                    Adding...
+                  </div>
+                ) : (
+                  'Add Company'
+                )}
+              </button>
             </div>
           </div>
         </div>

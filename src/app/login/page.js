@@ -15,7 +15,6 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
-  // Check if user is already logged in
   useEffect(() => {
     const token = sessionStorage.getItem('access_token');
     const userType = sessionStorage.getItem('user_type');
@@ -88,8 +87,6 @@ export default function LoginPage() {
         sessionStorage.setItem('user_type', data.user.user_types);
         sessionStorage.setItem('company_name', data.user.name);
       
-
-        // Redirect based on user type
         if (data.user.user_types === 'Company Admin') {
           router.push('/c-users');
         } else if (data.user.user_types === 'Department Admin') {
