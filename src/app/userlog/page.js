@@ -188,7 +188,7 @@ export default function UserLogPage() {
       }));
 
       setLogs(transformedLogs);
-      setPersonCount(transformedLogs.length);
+      // setPersonCount(transformedLogs.length);
       setIsFiltered(true);
     } catch (err) {
       setError(`Failed to fetch logs: ${err.message}`);
@@ -233,11 +233,9 @@ export default function UserLogPage() {
       const timeDifference = toDate.getTime() - fromDate.getTime();
       const totalDaysInRange = Math.ceil(timeDifference / (1000 * 3600 * 24)) + 1;
       
-      // Get unique working days for this person
       const uniqueDates = [...new Set(logs.map(log => log.date))];
       const totalDaysWorked = uniqueDates.length;
 
-      // Prepare data with additional summary
       exportData = logs.map(log => ({
         'Name': log.name,
         'Employee ID': log.serialNumber,
@@ -405,11 +403,11 @@ export default function UserLogPage() {
   
 
     worksheet.columns = [
-      { width: 22 }, // Employee Name
-      { width: 18 }, // Department
-      { width: 15 }, // Days Present (moved here)
-      ...dates.map(() => ({ width: 12 })), // Date columns
-      { width: 15 }  // Attendance % 
+      { width: 22 }, 
+      { width: 18 }, 
+      { width: 15 }, 
+      ...dates.map(() => ({ width: 12 })), 
+      { width: 15 }  
     ];
   
     const monthName = new Date(consolidateFilters.year, consolidateFilters.month - 1, 1)
